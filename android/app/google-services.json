@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "472380070338",
+    "project_id": "eventproagency-aec59",
+    "storage_bucket": "eventproagency-aec59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472380070338:android:684129b7c712c69ea8de5b",
+        "android_client_info": {
+          "package_name": "com.eventpro.eventproagency"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpi3Mi2dS3Oh1wTKnwaUYAkYV3J77xWIU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

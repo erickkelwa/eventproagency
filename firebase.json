@@ -1,0 +1,38 @@
+﻿{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "eventproagency-aec59",
+          "appId": "1:472380070338:android:684129b7c712c69ea8de5b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "eventproagency-aec59",
+          "configurations": {
+            "android": "1:472380070338:android:684129b7c712c69ea8de5b",
+            "ios": "1:472380070338:ios:a7c9211f64e5bd20a8de5b",
+            "macos": "1:472380070338:ios:a7c9211f64e5bd20a8de5b",
+            "web": "1:472380070338:web:d1912d585ef13030a8de5b",
+            "windows": "1:472380070338:web:14bd7d25198e2a3ba8de5b"
+          }
+        }
+      }
+    }
+  }
+}
