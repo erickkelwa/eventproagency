@@ -18,6 +18,7 @@ WORKDIR /var/www/html
 COPY eventpro_api/ .
 
 # Install PHP dependencies
+ENV COMPOSER_MEMORY_LIMIT=-1
 RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # Set permissions
