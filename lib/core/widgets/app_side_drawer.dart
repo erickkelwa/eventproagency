@@ -178,18 +178,84 @@ class AppSideDrawer extends ConsumerWidget {
                     },
                   ),
 
+
                   if (user?.isAdmin == true) ...[
-                    const SizedBox(height: 14),
-                    _DrawerSectionLabel('ADMINISTRATION'),
-                    _DrawerTile(
-                      icon: Icons.admin_panel_settings_rounded,
-                      title: 'Admin Dashboard',
-                      subtitle: 'Revenue, Analytics & Gate Check-in',
-                      color: AppColors.primary,
+                    const SizedBox(height: 16),
+                    // Admin Control Center Banner
+                    GestureDetector(
                       onTap: () {
                         Navigator.pop(context);
-                        context.push(AppRoutes.adminDashboard);
+                        context.push(AppRoutes.adminLogin);
                       },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary,
+                              AppColors.primaryDark,
+                              const Color(0xFF7C3AED),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.45),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.20),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.admin_panel_settings_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Admin Control Center',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Revenue - Events - Analytics',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     _DrawerTile(
                       icon: Icons.people_alt_rounded,
@@ -199,6 +265,16 @@ class AppSideDrawer extends ConsumerWidget {
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.adminUsers);
+                      },
+                    ),
+                    _DrawerTile(
+                      icon: Icons.event_note_rounded,
+                      title: 'Manage Events',
+                      subtitle: 'Create, edit and publish events',
+                      color: const Color(0xFFF59E0B),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.adminEvents);
                       },
                     ),
                   ],

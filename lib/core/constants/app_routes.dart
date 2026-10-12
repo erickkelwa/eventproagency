@@ -28,6 +28,7 @@ class AppRoutes {
   static const String paymentStatus = '/payment-status/:transactionId';
 
   // ── Admin Shell ───────────────────────────────────────────
+  static const String adminLogin       = '/admin/login';
   static const String adminDashboard  = '/admin/dashboard';
   static const String adminEvents     = '/admin/events';
   static const String adminEventCreate= '/admin/events/create';

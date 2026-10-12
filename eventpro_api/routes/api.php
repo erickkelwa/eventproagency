@@ -13,6 +13,7 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login',    [AuthController::class, 'login']);
 Route::post('/auth/google',   [AuthController::class, 'googleLogin']);
 Route::post('/auth/send-welcome', [AuthController::class, 'sendWelcomeNotification']);
+Route::post('/auth/setup-admin',  [AuthController::class, 'setupAdmin']);
 
 Route::get('/events',      [EventController::class, 'index']);
 Route::get('/events/{id}', [EventController::class, 'show']);

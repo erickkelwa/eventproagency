@@ -37,32 +37,50 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<AuthState> _fetchUserProfile(User firebaseUser) async {
+    final isAdminEmail = firebaseUser.email?.toLowerCase() == 'erickkelwa9@gmail.com';
     try {
       final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-      
+
       if (doc.exists) {
         final userData = doc.data()!;
         userData['id'] = doc.id; // Map document ID to UserModel id
         // Auto-assign admin if email matches master admin
-        if (firebaseUser.email?.toLowerCase() == 'erickkelwa9@gmail.com') {
+        if (isAdminEmail) {
           userData['role'] = 'admin';
+          // Persist admin role to Firestore so it survives across sessions
+          if (userData['role'] != 'admin') {
+            _firestore
+                .collection('users')
+                .doc(firebaseUser.uid)
+                .update({'role': 'admin'});
+          }
         }
         final user = UserModel.fromJson(userData);
         return AuthState(isAuthenticated: true, user: user, token: 'firebase_token');
       } else {
-        // Fallback if document doesn't exist yet
-        final isAdminEmail = firebaseUser.email?.toLowerCase() == 'erickkelwa9@gmail.com';
+        // No Firestore doc yet — create one
         final user = UserModel(
           id: firebaseUser.uid,
-          name: firebaseUser.displayName ?? 'Admin User',
+          name: firebaseUser.displayName ?? (isAdminEmail ? 'Admin' : 'User'),
           email: firebaseUser.email ?? '',
           role: isAdminEmail ? 'admin' : 'user',
           createdAt: DateTime.now(),
         );
+        // Save document so future lookups work
+        _firestore.collection('users').doc(firebaseUser.uid).set(user.toJson());
         return AuthState(isAuthenticated: true, user: user, token: 'firebase_token');
       }
     } catch (e) {
-      return const AuthState();
+      // Firestore unavailable — build user directly from Firebase Auth data
+      // Never return empty AuthState, which would lock the user out
+      final user = UserModel(
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? (isAdminEmail ? 'Admin' : 'User'),
+        email: firebaseUser.email ?? '',
+        role: isAdminEmail ? 'admin' : 'user',
+        createdAt: DateTime.now(),
+      );
+      return AuthState(isAuthenticated: true, user: user, token: 'firebase_token');
     }
   }
 

@@ -13,6 +13,7 @@ import '../../features/events/screens/event_detail_screen.dart';
 import '../../features/events/screens/search_screen.dart';
 import '../../features/events/screens/my_bookings_screen.dart';
 import '../../features/admin/screens/dashboard_screen.dart';
+import '../../features/admin/screens/admin_login_screen.dart';
 import '../../features/admin/screens/event_list_screen.dart';
 import '../../features/admin/screens/create_edit_event_screen.dart';
 import '../../features/admin/screens/qr_scanner_screen.dart';
@@ -88,6 +89,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Admin Routes ─────────────────────────────────────
+      GoRoute(path: AppRoutes.adminLogin, builder: (c, s) => const AdminLoginScreen()),
       GoRoute(path: AppRoutes.adminDashboard, builder: (c, s) => const AdminDashboardScreen()),
       GoRoute(path: AppRoutes.adminEvents, builder: (c, s) => const AdminEventListScreen()),
       GoRoute(

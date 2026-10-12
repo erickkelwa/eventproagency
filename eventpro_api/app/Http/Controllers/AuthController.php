@@ -146,4 +146,35 @@ class AuthController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * One-time admin setup — creates or resets the admin user.
+     * Call: POST /api/auth/setup-admin  body: { "secret": "EventProAdmin2026!" }
+     */
+    public function setupAdmin(Request $request)
+    {
+        $setupSecret = env('ADMIN_SETUP_SECRET', 'EventProAdmin2026!');
+        if ($request->input('secret') !== $setupSecret) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $adminEmail    = env('ADMIN_EMAIL', 'admin@eventpro.app');
+        $adminPassword = env('ADMIN_PASSWORD', 'EventProAdmin2026!');
+        $adminName     = env('ADMIN_NAME', 'EventPro Admin');
+
+        $user = User::updateOrCreate(
+            ['email' => $adminEmail],
+            [
+                'name'     => $adminName,
+                'password' => Hash::make($adminPassword),
+                'role'     => 'admin',
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Admin user ready.',
+            'email'   => $user->email,
+            'role'    => $user->role,
+        ]);
+    }
 }
