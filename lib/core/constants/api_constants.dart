@@ -7,11 +7,11 @@ class ApiConstants {
   // ── Base URLs ─────────────────────────────────────────────
   static const String localBaseUrl      = 'http://192.168.1.209:8000/api';
   static const String localBaseUrlIos   = 'http://127.0.0.1:8000/api';
-  static const String productionBaseUrl = 'https://us-central1-YOUR_PROJECT.cloudfunctions.net/api';
+  static const String productionBaseUrl = 'https://eventpro-api-709n.onrender.com/api';
   static const String ngrokBaseUrl      = 'https://errant-catnap-paparazzi.ngrok-free.dev/api';
 
-  // Use ngrokBaseUrl to test on phone without WiFi, localBaseUrl for same-WiFi testing
-  static const String baseUrl = kIsWeb ? 'http://127.0.0.1:8000/api' : ngrokBaseUrl;
+  // Live online Render URL for both Web and Mobile
+  static const String baseUrl = productionBaseUrl;
 
   // ── Timeouts ──────────────────────────────────────────────
   static const int connectTimeout = 30000;
