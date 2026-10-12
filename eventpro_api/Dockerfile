@@ -30,9 +30,9 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Install dependencies (production with unlimited memory and ignore platform reqs)
+# Install & update dependencies (production with unlimited memory and ignore platform reqs)
 ENV COMPOSER_MEMORY_LIMIT=-1
-RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs --prefer-dist
+RUN php -d memory_limit=-1 /usr/bin/composer update --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs --prefer-dist
 
 # Setup permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
