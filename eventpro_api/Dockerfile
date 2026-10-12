@@ -21,6 +21,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Ensure CLI PHP has unlimited memory for Composer
+RUN echo "memory_limit = -1" > /usr/local/etc/php/conf.d/memory-limit.ini
+
 # Set working directory
 WORKDIR /var/www/html
 
@@ -29,7 +32,7 @@ COPY . .
 
 # Install dependencies (production with unlimited memory and ignore platform reqs)
 ENV COMPOSER_MEMORY_LIMIT=-1
-RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs --prefer-dist
 
 # Setup permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
