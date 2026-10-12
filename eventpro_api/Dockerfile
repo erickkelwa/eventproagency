@@ -27,8 +27,9 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Install dependencies (production)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install dependencies (production with unlimited memory and ignore platform reqs)
+ENV COMPOSER_MEMORY_LIMIT=-1
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # Setup permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
