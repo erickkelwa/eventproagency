@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/scroll_reveal.dart';
 import '../providers/events_provider.dart';
 
 class EventDetailScreen extends ConsumerWidget {
@@ -41,10 +42,27 @@ class EventDetailScreen extends ConsumerWidget {
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
-                    event.imageUrl != null
+                    event.imageUrl != null && event.imageUrl!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: event.imageUrl!,
                             fit: BoxFit.cover,
+                            placeholder: (_, _) => Container(
+                              color: AppColors.surface,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                      AppColors.primary),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              decoration: BoxDecoration(
+                                gradient: AppColors.primaryGradient,
+                              ),
+                              child: const Icon(Icons.event_rounded,
+                                  size: 80, color: Colors.white24),
+                            ),
                           )
                         : Container(
                             decoration: BoxDecoration(
@@ -74,104 +92,244 @@ class EventDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Category + Title
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        event.category.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                          letterSpacing: 0.8,
+                    RevealOnce.up(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          event.category.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      event.title,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        height: 1.2,
+                    RevealOnce.up(
+                      delay: const Duration(milliseconds: 80),
+                      child: Text(
+                        event.title,
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          height: 1.2,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
 
                     // ── Info Cards ───────────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InfoTile(
-                            icon: Icons.calendar_today_rounded,
-                            label: 'Date',
-                            value: DateFormat('EEE, MMM d').format(event.date),
-                            accent: AppColors.primary,
+                    ScrollReveal(
+                      key: const ValueKey('info_row_1'),
+                      baseDelayMs: 60,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _InfoTile(
+                              icon: Icons.calendar_today_rounded,
+                              label: 'Date',
+                              value: DateFormat('EEE, MMM d').format(event.date),
+                              accent: AppColors.primary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _InfoTile(
-                            icon: Icons.access_time_rounded,
-                            label: 'Time',
-                            value: DateFormat('h:mm a').format(event.date),
-                            accent: AppColors.secondary,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InfoTile(
+                              icon: Icons.access_time_rounded,
+                              label: 'Time',
+                              value: DateFormat('h:mm a').format(event.date),
+                              accent: AppColors.secondary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InfoTile(
-                            icon: Icons.location_on_rounded,
-                            label: 'Venue',
-                            value: event.venue,
-                            accent: AppColors.tertiary,
+                    ScrollReveal(
+                      key: const ValueKey('info_row_2'),
+                      baseDelayMs: 120,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _InfoTile(
+                              icon: Icons.location_on_rounded,
+                              label: 'Venue',
+                              value: event.venue,
+                              accent: AppColors.tertiary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _InfoTile(
-                            icon: Icons.confirmation_number_rounded,
-                            label: 'Available',
-                            value: event.isSoldOut
-                                ? 'Sold Out'
-                                : '${event.availableSlots} slots',
-                            accent: event.isSoldOut
-                                ? AppColors.error
-                                : AppColors.success,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InfoTile(
+                              icon: Icons.confirmation_number_rounded,
+                              label: 'Available',
+                              value: event.isSoldOut
+                                  ? 'Sold Out'
+                                  : '${event.availableSlots} slots',
+                              accent: event.isSoldOut
+                                  ? AppColors.error
+                                  : AppColors.success,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
 
                     // ── About ────────────────────────────
-                    Text(
-                      'About this Event',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                    ScrollReveal(
+                      key: const ValueKey('about_header'),
+                      baseDelayMs: 60,
+                      child: Text(
+                        'About this Event',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text(
-                      event.description,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textSecondary,
-                        height: 1.7,
+                    ScrollReveal(
+                      key: const ValueKey('about_body'),
+                      baseDelayMs: 100,
+                      child: Text(
+                        event.description,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.textSecondary,
+                          height: 1.7,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
+
+                    // ── Special Guests & Main Performers ────────────────────────
+                    if (event.guests.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.star_rounded, size: 16, color: AppColors.primary),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Featured Guests & Performers',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 105,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: event.guests.length,
+                          itemBuilder: (ctx, idx) {
+                            final guestName = event.guests[idx];
+                            return Container(
+                              width: 90,
+                              margin: const EdgeInsets.only(right: 12),
+                              child: Column(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: AppColors.primary.withValues(alpha: 0.18),
+                                    child: Text(
+                                      guestName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join(),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    guestName,
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // ── Event Highlights & Perks ────────────────────────────
+                    if (event.highlights.isNotEmpty) ...[
+                      Text(
+                        'Event Highlights & Perks',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Column(
+                        children: event.highlights.map((highlight) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.check_rounded, size: 14, color: AppColors.success),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  highlight,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
 
                     // ── Google Map ───────────────────────
                     if (event.latitude != null && event.longitude != null) ...[

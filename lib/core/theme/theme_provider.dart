@@ -7,7 +7,7 @@ final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
 });
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.dark) {
+  ThemeNotifier() : super(ThemeMode.light) {
     _loadTheme();
   }
 
@@ -15,7 +15,7 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool(_themeKey) ?? true; // Default to dark mode (Spotify style)
+    final isDark = prefs.getBool(_themeKey) ?? false; // Default to Play Store white
     state = isDark ? ThemeMode.dark : ThemeMode.light;
   }
 

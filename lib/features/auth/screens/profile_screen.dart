@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/constants/app_routes.dart';
@@ -250,17 +251,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     iconColor: AppColors.secondary,
                     onTap: () => context.push(AppRoutes.services),
                   ),
+                  if (user?.isAdmin == true)
+                    _QuickLink(
+                      icon: Icons.admin_panel_settings_rounded,
+                      label: 'Admin Control Center',
+                      iconColor: AppColors.primary,
+                      onTap: () => context.push(AppRoutes.adminDashboard),
+                    ),
                   _QuickLink(
                     icon: Icons.help_outline_rounded,
                     label: 'Help & Support',
                     iconColor: AppColors.tertiary,
-                    onTap: () {},
+                    onTap: () => _showSupportModal(context),
                   ),
                   _QuickLink(
                     icon: Icons.privacy_tip_outlined,
                     label: 'Privacy Policy',
                     iconColor: AppColors.textMuted,
-                    onTap: () {},
+                    onTap: () => _showPrivacyPolicyModal(context),
                     showDivider: false,
                   ),
                 ],
@@ -312,6 +320,246 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         behavior: SnackBarBehavior.floating,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _showSupportModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Help & Support',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Need help with ticket bookings, payments, or event services? Get in touch with our team.',
+              style: TextStyle(fontSize: 13.5, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+
+            // WhatsApp Support
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              tileColor: AppColors.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.border),
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF25D366), size: 22),
+              ),
+              title: Text('WhatsApp Support', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              subtitle: Text('+254 728 664 792 · Instant response', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              onTap: () async {
+                final uri = Uri.parse('https://wa.me/254728664792?text=Hello%20EventPro%20Support,%20I%20need%20help');
+                if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Email Support
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              tileColor: AppColors.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.border),
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.email_rounded, color: AppColors.primary, size: 22),
+              ),
+              title: Text('Email Support', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              subtitle: Text('support@eventpro.co.ke', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              onTap: () async {
+                final uri = Uri.parse('mailto:erickkelwa9@gmail.com?subject=EventPro%20Support%20Request');
+                if (await canLaunchUrl(uri)) launchUrl(uri);
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Phone Hotline
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              tileColor: AppColors.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.border),
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.phone_rounded, color: Color(0xFF3B82F6), size: 22),
+              ),
+              title: Text('Call Hotline', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              subtitle: Text('0728 664 792 · Mon-Sat 8AM - 8PM', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              onTap: () async {
+                final uri = Uri.parse('tel:+254728664792');
+                if (await canLaunchUrl(uri)) launchUrl(uri);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.82,
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '1. Information We Collect',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'EventPro collects personal information such as your name, email address, phone number, and transaction records when you register, book tickets, or purchase event services.',
+                        style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '2. How We Use Your Information',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'We use your information to issue digital gate passes, process secure payments via Safaricom M-Pesa / Paystack, send event updates and notifications, and verify check-in at event venues.',
+                        style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '3. Payment Security',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Your payment credentials (M-Pesa PIN, card numbers) are never stored on EventPro servers. All transactions are encrypted and processed directly through licensed payment gateways.',
+                        style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '4. Data Protection & Sharing',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'We do not sell or rent your personal information to third parties. Event organizers only receive ticket validation data necessary for venue admission.',
+                        style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

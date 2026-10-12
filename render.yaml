@@ -1,14 +1,18 @@
-﻿services:
+services:
   - type: web
     name: eventpro-api
-    env: docker
-    dockerfilePath: ./Dockerfile
+    runtime: docker
+    dockerfilePath: ./eventpro_api/Dockerfile
+    dockerContext: ./eventpro_api
     plan: free
+    region: frankfurt
     envVars:
+      - key: APP_NAME
+        value: "EventPro Agency"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: "false"
       - key: APP_KEY
         generateValue: true
       - key: APP_URL
@@ -16,8 +20,30 @@
           type: web
           name: eventpro-api
           property: host
-      - key: BREVO_API_KEY
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/database/database.sqlite
+      - key: RUN_MIGRATIONS
+        value: "true"
+      # Mail Configuration (Gmail SMTP)
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        value: erickkelwa9@gmail.com
+      - key: MAIL_PASSWORD
         sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        value: erickkelwa9@gmail.com
+      - key: MAIL_FROM_NAME
+        value: "EventPro Agency"
+      # Safaricom Daraja M-Pesa Configuration
       - key: DARAJA_ENV
         value: sandbox
       - key: DARAJA_CONSUMER_KEY
@@ -29,7 +55,12 @@
       - key: DARAJA_SHORTCODE
         value: "174379"
       - key: DARAJA_CALLBACK_URL
-        sync: false
+        fromService:
+          type: web
+          name: eventpro-api
+          property: host
+          postfix: /api/payments/mpesa/callback
+      # Paystack Configuration
       - key: PAYSTACK_SECRET_KEY
         sync: false
       - key: PAYSTACK_PUBLIC_KEY

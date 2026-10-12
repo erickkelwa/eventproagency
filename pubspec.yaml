@@ -71,6 +71,8 @@ dependencies:
   # ── Animations ───────────────────────────────────────────
   animated_text_kit: ^4.2.3
   page_transition: ^2.1.0
+  flutter_animate: ^4.5.0       # Partiful-style scroll reveal & micro-animations
+  visibility_detector: ^0.4.0+2  # Detects when widgets enter the viewport
 
   # ── Form & Validation ────────────────────────────────────
   form_validator: ^2.1.1

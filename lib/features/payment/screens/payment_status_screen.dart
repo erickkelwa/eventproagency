@@ -23,7 +23,10 @@ class PaymentStatusScreen extends ConsumerStatefulWidget {
 class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   Timer? _pollingTimer;
   int _pollCount = 0;
-  static const int _maxPolls = 12; // e.g. 12 * 5s = 60s timeout
+  static const int _maxPolls = 12; // 12 * 5s = 60s timeout
+  bool _isTimedOut = false;
+  int _secondsLeft = 60;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -36,23 +39,72 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
   void _startPolling() {
+    _isTimedOut = false;
+    _pollCount = 0;
+    _secondsLeft = 60;
+    _pollingTimer?.cancel();
+    _countdownTimer?.cancel();
+
     // Initial fetch
     ref.invalidate(paymentStatusProvider(widget.transactionId));
+
+    // 1-second countdown timer for smooth UX feedback
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsLeft > 0) {
+        setState(() {
+          _secondsLeft--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_pollCount >= _maxPolls) {
         timer.cancel();
+        _countdownTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _isTimedOut = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.timer_off_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Payment request timed out. Please check your phone or retry.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
         return;
       }
-      
-      final currentData = ref.read(paymentStatusProvider(widget.transactionId)).valueOrNull;
-      
+
+      final currentData =
+          ref.read(paymentStatusProvider(widget.transactionId)).valueOrNull;
+
       if (currentData != null && !currentData.isPending) {
         timer.cancel(); // Stop polling if final state reached
+        _countdownTimer?.cancel();
       } else {
         ref.invalidate(paymentStatusProvider(widget.transactionId));
       }
@@ -117,13 +169,38 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
           onAction: _startPolling,
         ),
         data: (payment) {
-          if (payment.isPending) {
+          if (_isTimedOut) {
+            return _StatusView(
+              title: 'Payment Timed Out',
+              subtitle:
+                  'We did not receive a response from M-Pesa in time. If you were charged, your booking will update automatically once confirmed.',
+              iconColor: AppColors.error,
+              iconData: Icons.timer_off_rounded,
+              actionLabel: 'Retry Payment',
+              onAction: _startPolling,
+              secondaryActionLabel: 'Cancel & Return',
+              onSecondaryAction: () => context.pop(),
+            );
+          } else if (payment.isPending) {
             return _StatusView(
               title: 'Processing Payment...',
-              subtitle: 'Waiting for M-Pesa confirmation. This may take up to a minute.',
+              subtitle:
+                  'Waiting for M-Pesa confirmation. Enter your PIN on your phone ($_secondsLeft s remaining).',
               iconColor: AppColors.primary,
               iconData: Icons.sync_rounded,
               isAnimating: true,
+              actionLabel: 'Cancel STK Push',
+              onAction: () {
+                _pollingTimer?.cancel();
+                _countdownTimer?.cancel();
+                setState(() => _isTimedOut = true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment request cancelled.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
             );
           } else if (payment.isCompleted) {
             return _SuccessView(
@@ -133,8 +210,12 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
             );
           } else {
             return _StatusView(
-              title: 'Payment Failed',
-              subtitle: 'The transaction could not be completed or was cancelled.',
+              title: payment.status == 'cancelled'
+                  ? 'Payment Cancelled'
+                  : 'Payment Failed',
+              subtitle: payment.status == 'cancelled'
+                  ? 'The M-Pesa STK push request was cancelled on your phone.'
+                  : 'The transaction could not be completed. Please check your balance or PIN.',
               iconColor: AppColors.error,
               iconData: Icons.cancel_rounded,
               actionLabel: 'Try Again',
@@ -155,6 +236,8 @@ class _StatusView extends StatelessWidget {
   final bool isAnimating;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   const _StatusView({
     required this.title,
@@ -164,6 +247,8 @@ class _StatusView extends StatelessWidget {
     this.isAnimating = false,
     this.actionLabel,
     this.onAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
   });
 
   @override
@@ -212,25 +297,55 @@ class _StatusView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              height: 54,
+              height: 52,
               child: ElevatedButton(
                 onPressed: onAction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.card,
+                  backgroundColor: isAnimating ? AppColors.surface : AppColors.primary,
+                  elevation: isAnimating ? 0 : 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(
+                        color: isAnimating
+                            ? AppColors.border
+                            : Colors.transparent),
                   ),
                 ),
                 child: Text(
                   actionLabel!,
                   style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
+                    color: isAnimating
+                        ? AppColors.error
+                        : Colors.white,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: onSecondaryAction,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  secondaryActionLabel!,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),

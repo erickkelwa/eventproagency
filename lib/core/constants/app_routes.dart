@@ -35,4 +35,5 @@ class AppRoutes {
   static const String adminQrScanner  = '/admin/qr-scanner';
   static const String adminReports    = '/admin/reports';
   static const String adminTransactions = '/admin/transactions';
+  static const String adminUsers      = '/admin/users';
 }

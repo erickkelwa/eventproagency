@@ -18,21 +18,160 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="EventPro – Premium Event Management Platform. Discover, book, and manage the best live events in East Africa.">
+  <meta name="keywords" content="events, Kenya, Nairobi, concerts, tickets, EventPro">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="eventproagency">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventPro">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>eventproagency</title>
+  <title>EventPro – Live Events in Kenya</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8F9FA;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── Splash Loading Screen ── */
+    #flutter-loading-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      z-index: 9999;
+      transition: opacity 0.6s ease;
+    }
+    #flutter-loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash-logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    .splash-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #C89B3C, #E8B84B);
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 50px rgba(200, 155, 60, 0.4);
+      animation: splashPulse 1.8s ease-in-out infinite;
+    }
+    .splash-icon svg {
+      width: 44px;
+      height: 44px;
+      fill: #000;
+    }
+    .splash-wordmark {
+      color: #fff;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      font-family: 'Inter', sans-serif;
+    }
+    .splash-wordmark span {
+      background: linear-gradient(90deg, #C89B3C, #E8B84B);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .splash-tagline {
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      margin-top: -12px;
+    }
+    .splash-dots {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .splash-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #C89B3C;
+      animation: dotBounce 1.2s ease-in-out infinite;
+    }
+    .splash-dot:nth-child(2) { animation-delay: 0.15s; background: #E8B84B; }
+    .splash-dot:nth-child(3) { animation-delay: 0.3s; background: #F5CC6A; }
+
+    @keyframes splashPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 20px 50px rgba(200,155,60,0.4); }
+      50% { transform: scale(1.06); box-shadow: 0 28px 60px rgba(200,155,60,0.6); }
+    }
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40% { transform: translateY(-10px); opacity: 1; }
+    }
+  </style>
+
+  <!-- ───────────────────────────────────────────────────────
+       Firebase JS SDK (compat) – MUST be loaded before Flutter
+       boots so flutterfire can locate the firebase global objects.
+  ──────────────────────────────────────────────────────────── -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+
+  <script>
+    // Initialize Firebase with web config from firebase_options.dart
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKF_KzfhwtoeMwupbhJAUtGtpex4kcS5k",
+      authDomain: "eventproagency-aec59.firebaseapp.com",
+      projectId: "eventproagency-aec59",
+      storageBucket: "eventproagency-aec59.firebasestorage.app",
+      messagingSenderId: "472380070338",
+      appId: "1:472380070338:web:d1912d585ef13030a8de5b",
+      measurementId: "G-34J7KH2K4F"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
+
+  <!-- ── Premium Splash Screen ─────────────────────────────── -->
+  <div id="flutter-loading-screen">
+    <div class="splash-logo-wrap">
+      <div class="splash-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
+        </svg>
+      </div>
+      <div class="splash-wordmark">EventPro<span>.</span></div>
+      <div class="splash-tagline">Experience Live Moments in Kenya</div>
+      <div class="splash-dots">
+        <div class="splash-dot"></div>
+        <div class="splash-dot"></div>
+        <div class="splash-dot"></div>
+      </div>
+    </div>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -42,5 +181,16 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    // Hide splash once Flutter is ready
+    window.addEventListener('flutter-first-frame', function () {
+      const splash = document.getElementById('flutter-loading-screen');
+      if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(() => splash.remove(), 700);
+      }
+    });
+  </script>
 </body>
 </html>

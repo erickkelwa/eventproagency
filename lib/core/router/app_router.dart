@@ -17,6 +17,7 @@ import '../../features/admin/screens/event_list_screen.dart';
 import '../../features/admin/screens/create_edit_event_screen.dart';
 import '../../features/admin/screens/qr_scanner_screen.dart';
 import '../../features/admin/screens/reports_screen.dart';
+import '../../features/admin/screens/admin_users_screen.dart';
 import '../../features/services/screens/services_home_screen.dart';
 import '../../features/services/screens/service_detail_screen.dart';
 import '../../features/payment/screens/checkout_screen.dart';
@@ -99,6 +100,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.adminQrScanner, builder: (c, s) => const QrScannerScreen()),
       GoRoute(path: AppRoutes.adminReports, builder: (c, s) => const ReportsScreen()),
+      GoRoute(path: AppRoutes.adminUsers, builder: (c, s) => const AdminUsersScreen()),
     ],
   );
 });

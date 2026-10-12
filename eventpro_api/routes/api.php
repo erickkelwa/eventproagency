@@ -12,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login',    [AuthController::class, 'login']);
 Route::post('/auth/google',   [AuthController::class, 'googleLogin']);
+Route::post('/auth/send-welcome', [AuthController::class, 'sendWelcomeNotification']);
 
 Route::get('/events',      [EventController::class, 'index']);
 Route::get('/events/{id}', [EventController::class, 'show']);
@@ -62,5 +63,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/check-in',   [AdminController::class, 'checkIn']);
         Route::get('/reports',     [AdminController::class, 'reports']);
+        Route::get('/users',       [AdminController::class, 'users']);
     });
 });

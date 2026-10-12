@@ -10,15 +10,15 @@ class AppTheme {
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    // Warm amber/orange dark backgrounds, cream warm light backgrounds
-    final bg = isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFFFBF5);
-    final surface = isDark ? const Color(0xFF1A1208) : const Color(0xFFFFF3E0);
+    // Play Store clean aesthetic: clean off-white canvas, pure white cards, Google grey borders
+    final bg = isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF8F9FA);
+    final surface = isDark ? const Color(0xFF1A1208) : const Color(0xFFFFFFFF);
     final card = isDark ? const Color(0xFF251810) : const Color(0xFFFFFFFF);
-    final border = isDark ? const Color(0xFF4A3020) : const Color(0xFFFFCC80);
-    final textPrimary = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1A0A00);
-    final textSecondary = isDark ? const Color(0xFFD4A070) : const Color(0xFF6D3A00);
-    final textMuted = isDark ? const Color(0xFF7A5540) : const Color(0xFF9E6B35);
-    final inputFill = isDark ? const Color(0xFF2A1A0E) : const Color(0xFFFFF3E0);
+    final border = isDark ? const Color(0xFF4A3020) : const Color(0xFFE8EAED);
+    final textPrimary = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF202124);
+    final textSecondary = isDark ? const Color(0xFFD4A070) : const Color(0xFF5F6368);
+    final textMuted = isDark ? const Color(0xFF7A5540) : const Color(0xFF80868B);
+    final inputFill = isDark ? const Color(0xFF2A1A0E) : const Color(0xFFF1F3F4);
 
     return ThemeData(
       useMaterial3: true,
@@ -150,22 +150,21 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        // Spotify-style: near-black bar with glowing accent indicator
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFF1A0A00),
-        selectedItemColor: AppColors.yellow,      // Yellow highlight for selection
-        unselectedItemColor: isDark ? const Color(0xFF7A5540) : const Color(0xFFD4A070),
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFFFFF),
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: isDark ? const Color(0xFF7A7A7A) : const Color(0xFF80868B),
         selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700),
         unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w400),
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFF1A0A00),
-        indicatorColor: AppColors.primary.withValues(alpha: 0.25),
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFFFFF),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.outfit(
-              color: AppColors.yellow,
+              color: AppColors.primary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             );

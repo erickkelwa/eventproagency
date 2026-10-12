@@ -118,4 +118,13 @@ class AdminController extends Controller
             'category_breakdown' => ['Music' => 10, 'Tech' => 5]
         ]);
     }
+
+    public function users(Request $request)
+    {
+        $users = User::latest()->get(['id', 'name', 'email', 'role', 'phone', 'created_at']);
+        return response()->json([
+            'total' => $users->count(),
+            'users' => $users,
+        ]);
+    }
 }

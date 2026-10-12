@@ -2,72 +2,65 @@
 
 namespace App\Services;
 
-use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class BrevoMailService
 {
-    protected $client;
-    protected $apiKey;
+    protected string $fromEmail;
+    protected string $fromName;
 
     public function __construct()
     {
-        $this->client = new Client(['base_uri' => 'https://api.brevo.com/v3/']);
-        $this->apiKey = env('BREVO_API_KEY');
+        $this->fromEmail = config('mail.from.address', 'erickkelwa9@gmail.com');
+        $this->fromName  = config('mail.from.name', 'EventPro Agency');
     }
 
+    // ── Payment Receipt ──────────────────────────────────────
     public function sendReceipt($email, $name, $amount, $transactionId)
     {
-        $displayName   = $name ?: 'Valued Customer';
-        $formattedAmt  = 'KES ' . number_format((float) $amount, 2);
-        $date          = now()->format('F j, Y \a\t g:i A');
-        $html          = $this->buildReceiptHtml($displayName, $formattedAmt, $transactionId, $date);
+        $displayName  = $name ?: 'Valued Customer';
+        $formattedAmt = 'KES ' . number_format((float) $amount, 2);
+        $date         = now()->format('F j, Y \a\t g:i A');
+        $html         = $this->buildReceiptHtml($displayName, $formattedAmt, $transactionId, $date);
+        $subject      = '✅ Payment Confirmed — EventPro Agency (#' . $transactionId . ')';
 
         try {
-            $response = $this->client->post('smtp/email', [
-                'headers' => [
-                    'api-key'      => $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'sender'      => ['name' => 'EventPro Agency', 'email' => 'erickkelwa9@gmail.com'],
-                    'to'          => [['email' => $email, 'name' => $displayName]],
-                    'subject'     => '✅ Payment Confirmed — EventPro Agency (#' . $transactionId . ')',
-                    'htmlContent' => $html,
-                ],
-            ]);
-            return json_decode($response->getBody(), true);
+            Mail::html($html, function ($message) use ($email, $displayName, $subject) {
+                $message->to($email, $displayName)
+                        ->subject($subject)
+                        ->from($this->fromEmail, $this->fromName);
+            });
+            Log::info('Receipt email sent to ' . $email);
+            return true;
         } catch (\Exception $e) {
-            Log::error('Brevo Mail Error: ' . $e->getMessage());
+            Log::error('SMTP Receipt Email Error: ' . $e->getMessage());
             return false;
         }
     }
 
+    // ── Welcome Email ────────────────────────────────────────
     public function sendWelcome($email, $name)
     {
         $displayName = $name ?: 'there';
         $html        = $this->buildWelcomeHtml($displayName);
+        $subject     = '🎉 Welcome to EventPro Agency!';
 
         try {
-            $response = $this->client->post('smtp/email', [
-                'headers' => [
-                    'api-key'      => $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'sender'      => ['name' => 'EventPro Agency', 'email' => 'erickkelwa9@gmail.com'],
-                    'to'          => [['email' => $email, 'name' => $displayName]],
-                    'subject'     => '🎉 Welcome to EventPro Agency!',
-                    'htmlContent' => $html,
-                ],
-            ]);
-            return json_decode($response->getBody(), true);
+            Mail::html($html, function ($message) use ($email, $displayName, $subject) {
+                $message->to($email, $displayName)
+                        ->subject($subject)
+                        ->from($this->fromEmail, $this->fromName);
+            });
+            Log::info('Welcome email sent to ' . $email);
+            return true;
         } catch (\Exception $e) {
-            Log::error('Brevo Welcome Email Error: ' . $e->getMessage());
+            Log::error('SMTP Welcome Email Error: ' . $e->getMessage());
             return false;
         }
     }
 
+    // ── HTML Templates ───────────────────────────────────────
     private function buildWelcomeHtml(string $name): string
     {
         return <<<HTML
@@ -141,7 +134,7 @@ class BrevoMailService
               <p style="color:#555;font-size:14px;line-height:1.7;margin:0 0 24px;">
                 Start exploring events near you and let us help make every occasion extraordinary.
               </p>
-              <a href="mailto:erickkelwa9@gmail.com"
+              <a href="mailto:{$this->fromEmail}"
                  style="display:inline-block;background:linear-gradient(135deg,#e94560,#c0392b);color:#ffffff;font-size:15px;font-weight:700;padding:16px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.5px;">
                 Get Started 🚀
               </a>
@@ -149,19 +142,13 @@ class BrevoMailService
           </tr>
 
           <!-- Divider -->
-          <tr>
-            <td style="padding:0 40px;">
-              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0;"/>
-            </td>
-          </tr>
+          <tr><td style="padding:0 40px;"><hr style="border:none;border-top:1px solid #e2e8f0;margin:0;"/></td></tr>
 
           <!-- Footer -->
           <tr>
             <td style="padding:24px 40px;text-align:center;">
               <p style="color:#aaa;font-size:12px;margin:0 0 4px;">© EventPro Agency. All rights reserved.</p>
-              <p style="color:#ccc;font-size:11px;margin:0;">
-                You received this email because you created an account with us.
-              </p>
+              <p style="color:#ccc;font-size:11px;margin:0;">You received this email because you created an account with us.</p>
             </td>
           </tr>
 
@@ -175,7 +162,7 @@ class BrevoMailService
 HTML;
     }
 
-(string $name, string $amount, string $transactionId, string $date): string
+    private function buildReceiptHtml(string $name, string $amount, string $transactionId, string $date): string
     {
         return <<<HTML
 <!DOCTYPE html>
@@ -237,7 +224,7 @@ HTML;
                   <td style="padding:14px 24px;color:#1a1a2e;font-size:13px;font-weight:600;border-bottom:1px solid #e2e8f0;font-family:monospace;">#{$transactionId}</td>
                 </tr>
                 <tr>
-                  <td style="padding:14px 24px;color:#888;font-size:13px;border-bottom:1px solid #e2e8f0;">Date & Time</td>
+                  <td style="padding:14px 24px;color:#888;font-size:13px;border-bottom:1px solid #e2e8f0;">Date &amp; Time</td>
                   <td style="padding:14px 24px;color:#1a1a2e;font-size:13px;font-weight:600;border-bottom:1px solid #e2e8f0;">{$date}</td>
                 </tr>
                 <tr>
@@ -254,7 +241,7 @@ HTML;
           <tr>
             <td style="padding:0 40px 32px;">
               <p style="color:#555;font-size:14px;line-height:1.7;margin:0;">
-                We're excited to work with you to make your event an unforgettable experience. 
+                We're excited to work with you to make your event an unforgettable experience.
                 If you have any questions, feel free to reply to this email — we're always happy to help.
               </p>
             </td>
@@ -263,7 +250,7 @@ HTML;
           <!-- CTA Button -->
           <tr>
             <td style="padding:0 40px 40px;text-align:center;">
-              <a href="mailto:erickkelwa9@gmail.com"
+              <a href="mailto:{$this->fromEmail}"
                  style="display:inline-block;background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#ffffff;font-size:14px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;letter-spacing:0.5px;">
                 Contact Us
               </a>
@@ -271,21 +258,13 @@ HTML;
           </tr>
 
           <!-- Divider -->
-          <tr>
-            <td style="padding:0 40px;">
-              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0;" />
-            </td>
-          </tr>
+          <tr><td style="padding:0 40px;"><hr style="border:none;border-top:1px solid #e2e8f0;margin:0;" /></td></tr>
 
           <!-- Footer -->
           <tr>
             <td style="padding:24px 40px;text-align:center;">
-              <p style="color:#aaa;font-size:12px;margin:0 0 4px;">
-                © {$date} EventPro Agency. All rights reserved.
-              </p>
-              <p style="color:#ccc;font-size:11px;margin:0;">
-                This is an automated receipt. Please do not reply directly to this message.
-              </p>
+              <p style="color:#aaa;font-size:12px;margin:0 0 4px;">© EventPro Agency. All rights reserved.</p>
+              <p style="color:#ccc;font-size:11px;margin:0;">This is an automated receipt. Please do not reply directly to this message.</p>
             </td>
           </tr>
 

@@ -39,6 +39,7 @@ class ApiConstants {
   static const String adminCheckIn      = '/admin/check-in';
   static const String adminReports      = '/admin/reports';
   static const String adminTransactions = '/admin/transactions';
+  static const String adminUsers        = '/admin/users';
 
   // ── Bookings ──────────────────────────────────────────────
   static const String bookings       = '/bookings';

@@ -17,6 +17,8 @@ class EventModel extends Equatable {
   final String organizerId;
   final String? organizerName;
   final bool isFeatured;
+  final List<String> guests;
+  final List<String> highlights;
 
   const EventModel({
     required this.id,
@@ -35,6 +37,8 @@ class EventModel extends Equatable {
     required this.organizerId,
     this.organizerName,
     this.isFeatured = false,
+    this.guests = const [],
+    this.highlights = const [],
   });
 
   int get availableSlots => capacity - (bookedCount ?? 0);
@@ -60,6 +64,8 @@ class EventModel extends Equatable {
       organizerId: json['organizer_id'] as String,
       organizerName: json['organizer_name'] as String?,
       isFeatured: json['is_featured'] as bool? ?? false,
+      guests: json['guests'] != null ? List<String>.from(json['guests'] as List) : const [],
+      highlights: json['highlights'] != null ? List<String>.from(json['highlights'] as List) : const [],
     );
   }
 
@@ -80,8 +86,10 @@ class EventModel extends Equatable {
         'organizer_id': organizerId,
         'organizer_name': organizerName,
         'is_featured': isFeatured,
+        'guests': guests,
+        'highlights': highlights,
       };
 
   @override
-  List<Object?> get props => [id, title, date, price, category];
+  List<Object?> get props => [id, title, date, price, category, guests];
 }

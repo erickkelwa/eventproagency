@@ -8,6 +8,7 @@ import '../../../core/widgets/pro_empty_state.dart';
 import '../../../core/widgets/pro_section_header.dart';
 import '../../../core/widgets/pro_service_card.dart';
 import '../../../core/widgets/pro_skeletons.dart';
+import '../../../core/widgets/scroll_reveal.dart';
 import '../providers/services_provider.dart';
 
 class ServicesHomeScreen extends ConsumerWidget {
@@ -32,30 +33,32 @@ class ServicesHomeScreen extends ConsumerWidget {
 
           // ── Hero Header ────────────────────────────────
           SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Book Event Services',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+            child: RevealOnce.up(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Book Event Services',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Professional vendors for your perfect event',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ],
+                    SizedBox(height: 6),
+                    Text(
+                      'Professional vendors for your perfect event',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -67,9 +70,12 @@ class ServicesHomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const ProSectionHeader(
-                    title: 'Browse by Category',
-                    padding: EdgeInsets.zero,
+                  const RevealOnce.fromLeft(
+                    delay: Duration(milliseconds: 150),
+                    child: ProSectionHeader(
+                      title: 'Browse by Category',
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -159,10 +165,16 @@ class ServicesHomeScreen extends ConsumerWidget {
                   delegate: SliverChildBuilderDelegate(
                     (_, i) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: ProServiceCard(
-                        service: services[i],
-                        onTap: () =>
-                            context.push('/services/${services[i].id}'),
+                      child: ScrollReveal(
+                        key: ValueKey('service_card_$i'),
+                        index: i,
+                        staggerMs: 60,
+                        durationMs: 480,
+                        child: ProServiceCard(
+                          service: services[i],
+                          onTap: () =>
+                              context.push('/services/${services[i].id}'),
+                        ),
                       ),
                     ),
                     childCount: services.length,

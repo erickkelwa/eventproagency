@@ -20,19 +20,36 @@ class AppBottomNav extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authStateProvider).valueOrNull?.user;
 
-    final barColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFF3E0);
+    final barColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFFFFFF);
     final borderColor =
-        isDark ? const Color(0xFF1F1F1F) : const Color(0xFFFFCC80);
+        isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE8EAED);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: barColor,
-        border: Border(top: BorderSide(color: borderColor, width: 1)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: barColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.45)
+                    : const Color(0x18000000),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              if (!isDark)
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+            ],
+          ),
           child: Row(
             children: [
               _NavItem(
@@ -89,7 +106,8 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final muted = isDark ? const Color(0xFF6E6E6E) : const Color(0xFF9E6B35);
+    final muted = isDark ? const Color(0xFF6E6E6E) : const Color(0xFF80868B);
+    final selectedColor = isDark ? AppColors.yellow : AppColors.primary;
 
     return Expanded(
       child: GestureDetector(
@@ -104,12 +122,12 @@ class _NavItem extends StatelessWidget {
                 selected ? selectedIcon : icon,
                 key: ValueKey(selected),
                 size: selected ? 25 : 22,
-                color: selected ? AppColors.yellow : muted,
+                color: selected ? selectedColor : muted,
                 shadows: selected
                     ? [
                         Shadow(
-                          color: AppColors.yellow.withValues(alpha: 0.55),
-                          blurRadius: 12,
+                          color: selectedColor.withValues(alpha: 0.35),
+                          blurRadius: 10,
                         ),
                       ]
                     : null,
@@ -121,7 +139,7 @@ class _NavItem extends StatelessWidget {
               width: selected ? 4 : 0,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.yellow,
+                color: selectedColor,
                 shape: BoxShape.circle,
               ),
             ),

@@ -115,6 +115,20 @@ class _FeaturedCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        errorWidget: (_, __, ___) => Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.secondary,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: const Icon(Icons.event_rounded,
+                              size: 64, color: Colors.white24),
+                        ),
                       )
                     : Container(
                         decoration: BoxDecoration(

@@ -560,11 +560,18 @@ HTML;
                 ]);
                 $this->markBookingComplete($payment->fresh());
                 $this->notifyPaymentCompleted($payment->fresh());
-            } elseif ($resultCode === 1) {
-                // 1 = cancelled by user
+            } elseif ($resultCode === 1 || $resultCode === 1032) {
+                // 1 / 1032 = Cancelled by user
+                $payment->update(['status' => 'cancelled']);
+            } elseif ($resultCode === 1037 || $resultCode === 2001) {
+                // 1037 = Timeout / user took too long to enter PIN
+                // 2001 = Invalid PIN or wrong initiator
+                $payment->update(['status' => 'failed']);
+            } elseif ($resultCode !== null && $resultCode !== '0' && $resultCode !== 0) {
+                // Any other definitive error code from Daraja (e.g. 1001, 1019, 1025)
                 $payment->update(['status' => 'failed']);
             }
-            // Any other code: leave pending (still awaiting customer PIN / processing)
+            // If ResultCode is null (or query returned 'The transaction is being processed'), leave pending
         } catch (\Exception $e) {
             // Non-fatal: keep the current status and let the next poll retry.
             report($e);
@@ -783,19 +790,43 @@ HTML;
             }
         }
 
-        // ── Receipt email via Brevo ──
+        // ── Receipt email via MailService ──
         $email = $payment->email;
-        if (!$email) {
-            \Illuminate\Support\Facades\Log::info(
-                'Payment completed but no email provided; skipped receipt.',
-                ['payment_id' => $payment->id]
-            );
-            return;
+        $name = '';
+        $eventName = null;
+
+        // Try to enrich customer and event/service details from the booking record
+        if ($payment->booking_type === 'event') {
+            $booking = Booking::with(['user', 'event'])->find($payment->booking_id);
+            if ($booking) {
+                if (!$email && $booking->user) {
+                    $email = $booking->user->email;
+                }
+                if ($booking->user) {
+                    $name = $booking->user->name;
+                }
+                if ($booking->event) {
+                    $eventName = $booking->event->title;
+                }
+            }
+        } elseif ($payment->booking_type === 'service') {
+            $booking = ServiceBooking::with(['user', 'service'])->find($payment->booking_id);
+            if ($booking) {
+                if (!$email && $booking->user) {
+                    $email = $booking->user->email;
+                }
+                if ($booking->user) {
+                    $name = $booking->user->name;
+                }
+                if ($booking->service) {
+                    $eventName = $booking->service->title;
+                }
+            }
         }
 
-        if (!env('BREVO_API_KEY')) {
-            \Illuminate\Support\Facades\Log::warning(
-                'Payment completed but BREVO_API_KEY not set; skipped receipt email.',
+        if (!$email) {
+            \Illuminate\Support\Facades\Log::info(
+                'Payment completed but no email found; skipped receipt email.',
                 ['payment_id' => $payment->id]
             );
             return;
@@ -803,7 +834,8 @@ HTML;
 
         try {
             app(BrevoMailService::class)
-                ->sendReceipt($email, '', $payment->amount, $payment->transaction_id);
+                ->sendReceipt($email, $name, $payment->amount, $payment->transaction_id);
+            \Illuminate\Support\Facades\Log::info("Receipt email sent successfully for payment #{$payment->transaction_id} to {$email}");
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Receipt email failed: ' . $e->getMessage());
         }

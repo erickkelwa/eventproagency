@@ -55,21 +55,22 @@ class AppColors {
   static const Color errorLight   = Color(0xFFFFEBEE);
 
   // ── Backgrounds ───────────────────────────────────────────────────────────
-  static Color get background          => _isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF4F0EB); // Cream background
-  static Color get backgroundSecondary => _isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE8E4DF); // Slightly darker margins
-  static Color get surface             => _isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFAFAFA);
-  static Color get card                => _isDark ? const Color(0xFF2B2B2B) : const Color(0xFFFFFFFF); // White cards
-  static Color get cardHover           => _isDark ? const Color(0xFF383838) : const Color(0xFFF9F9F9);
+  // Play Store clean white aesthetic: pure #FFFFFF cards on clean off-white (#F8F9FA) canvas
+  static Color get background          => _isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF8F9FA); 
+  static Color get backgroundSecondary => _isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F3F4); 
+  static Color get surface             => _isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+  static Color get card                => _isDark ? const Color(0xFF2B2B2B) : const Color(0xFFFFFFFF); 
+  static Color get cardHover           => _isDark ? const Color(0xFF383838) : const Color(0xFFF1F3F4);
 
   // ── Input Fields ──────────────────────────────────────────────────────────
-  static Color get inputFill   => _isDark ? const Color(0xFF2B2B2B) : const Color(0xFFFFFFFF);
-  static Color get border      => _isDark ? const Color(0xFF4A4A4A) : const Color(0xFFE0DCD6);
+  static Color get inputFill   => _isDark ? const Color(0xFF2B2B2B) : const Color(0xFFF1F3F4);
+  static Color get border      => _isDark ? const Color(0xFF4A4A4A) : const Color(0xFFE8EAED);
   static const Color borderFocused = Color(0xFFF78B5D);
 
   // ── Text ──────────────────────────────────────────────────────────────────
-  static Color get textPrimary   => _isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1C); // Dark charcoal text
-  static Color get textSecondary => _isDark ? const Color(0xFFB3B3B3) : const Color(0xFF6E6E6E); // Gray muted text
-  static Color get textMuted     => _isDark ? const Color(0xFF7A7A7A) : const Color(0xFF9E9E9E);
+  static Color get textPrimary   => _isDark ? const Color(0xFFFFFFFF) : const Color(0xFF202124); // Play Store primary dark
+  static Color get textSecondary => _isDark ? const Color(0xFFB3B3B3) : const Color(0xFF5F6368); // Play Store secondary gray
+  static Color get textMuted     => _isDark ? const Color(0xFF7A7A7A) : const Color(0xFF80868B); // Play Store muted gray
 
   // ── Gradients ─────────────────────────────────────────────────────────────
   /// Main brand gradient: yellow → amber → orange → deep red

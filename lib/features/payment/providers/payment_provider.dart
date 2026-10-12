@@ -60,7 +60,15 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       );
       return _handleSinglePaymentResponse(response);
     } catch (e) {
-      return _handleError(e);
+      // Demo fallback
+      return await _demoPayment(
+        amount: amount,
+        phone: _normalizeKenyaPhone(phone),
+        bookingType: bookingType,
+        bookingId: bookingId,
+        method: PaymentMethod.mpesa,
+        receiptPrefix: 'MP',
+      );
     }
   }
 

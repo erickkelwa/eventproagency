@@ -13,9 +13,13 @@ import '../../../core/widgets/pro_empty_state.dart';
 import '../../../core/widgets/pro_event_card.dart';
 import '../../../core/widgets/pro_section_header.dart';
 import '../../../core/widgets/pro_skeletons.dart';
+import '../../../core/widgets/scroll_reveal.dart';
 import '../providers/events_provider.dart';
 import '../models/event_model.dart';
-import '../../../core/theme/theme_provider.dart';
+import '../widgets/notifications_modal.dart';
+import '../../../core/widgets/app_side_drawer.dart';
+import '../../../core/localization/language_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Support WhatsApp number
 const _supportWhatsApp = '254728664792';
@@ -61,10 +65,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final eventsAsync = ref.watch(filteredEventsProvider);
-    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      drawer: const AppSideDrawer(),
       floatingActionButton: _WhatsAppFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Stack(
@@ -118,43 +122,189 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             onRefresh: () => ref.read(eventsProvider.notifier).refresh(),
             child: CustomScrollView(
               slivers: [
-                // ── Top Bar ────────────────────────────────
+                // ── Top Bar with Language Indicator ─────────────────
                 SliverToBoxAdapter(
                   child: MultiaAppBar(
                     title: 'EventPro',
-                    leading: IconButton(
-                      onPressed: () =>
-                          ref.read(themeProvider.notifier).toggleTheme(),
-                      icon: Icon(
-                        isDark
-                            ? Icons.light_mode_rounded
-                            : Icons.dark_mode_rounded,
-                        color: AppColors.textSecondary,
-                        size: 22,
+                    leading: Builder(
+                      builder: (ctx) => IconButton(
+                        onPressed: () => Scaffold.of(ctx).openDrawer(),
+                        icon: Icon(
+                          Icons.menu_rounded,
+                          color: AppColors.textPrimary,
+                          size: 24,
+                        ),
                       ),
                     ),
-                    trailing: Stack(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.notifications_outlined,
-                              color: AppColors.textSecondary, size: 22),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final currentLang = ref.watch(languageProvider);
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                final next = currentLang == AppLanguage.en
+                                    ? AppLanguage.sw
+                                    : (currentLang == AppLanguage.sw
+                                        ? AppLanguage.fr
+                                        : AppLanguage.en);
+                                ref.read(languageProvider.notifier).state = next;
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.card,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  '${currentLang.flag} ${currentLang.code}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        Positioned(
-                          right: 12,
-                          top: 12,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryDark,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.background, width: 1.5),
+                        const SizedBox(width: 4),
+                        Stack(
+                          children: [
+                            IconButton(
+                              onPressed: () => NotificationsModal.show(context),
+                              icon: Icon(Icons.notifications_outlined,
+                                  color: AppColors.textSecondary, size: 22),
                             ),
-                          ),
+                            Positioned(
+                              right: 12,
+                              top: 12,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryDark,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: AppColors.background, width: 1.5),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // ── VIP "Wow Factor" Greetings Banner ───────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final user = ref.watch(authStateProvider).valueOrNull?.user;
+                        final firstName = user != null && user.name.isNotEmpty
+                            ? user.name.split(' ').first
+                            : 'Guest';
+                        final isSwahili = ref.watch(languageProvider) == AppLanguage.sw;
+                        final isFrench = ref.watch(languageProvider) == AppLanguage.fr;
+
+                        String greetingTitle = 'Hello, $firstName 👋';
+                        String greetingSub = 'Ready for unforgettable live experiences in Kenya?';
+                        if (isSwahili) {
+                          greetingTitle = 'Jambo, $firstName 👋';
+                          greetingSub = 'Uko tayari kwa matukio bora na burudani Kenya?';
+                        } else if (isFrench) {
+                          greetingTitle = 'Bonjour, $firstName 👋';
+                          greetingSub = 'Prêt pour des moments inoubliables au Kenya ?';
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        '⭐ VIP ACCESS ENABLED',
+                                        style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      greetingTitle,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      greetingSub,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  gradient: AppColors.primaryGradient,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.4),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.celebration_rounded,
+                                  color: Colors.black,
+                                  size: 26,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -162,9 +312,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 // ── Search Bar ─────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                    child: _SearchBar(
-                      onTap: () => context.push(AppRoutes.search),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    child: RevealOnce.up(
+                      delay: const Duration(milliseconds: 100),
+                      child: _SearchBar(
+                        onTap: () => context.push(AppRoutes.search),
+                      ),
                     ),
                   ),
                 ),
@@ -176,9 +329,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const ProSectionHeader(
-                          title: 'Popular categories',
-                          padding: EdgeInsets.zero,
+                        const RevealOnce.fromLeft(
+                          delay: Duration(milliseconds: 150),
+                          child: ProSectionHeader(
+                            title: 'Popular categories',
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         SizedBox(
@@ -226,9 +382,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const ProSectionHeader(
-                              title: 'Featured',
-                              padding: EdgeInsets.zero,
+                            const RevealOnce.fromLeft(
+                              child: ProSectionHeader(
+                                title: 'Featured',
+                                padding: EdgeInsets.zero,
+                              ),
                             ),
                             const SizedBox(height: 14),
                             SizedBox(
@@ -239,7 +397,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 itemCount: banners.length,
                                 itemBuilder: (_, i) => Padding(
                                   padding: const EdgeInsets.only(right: 14),
-                                  child: _HeroBanner(event: banners[i]),
+                                  child: RevealOnce.up(
+                                    delay: Duration(milliseconds: 80 + i * 100),
+                                    child: _HeroBanner(event: banners[i]),
+                                  ),
                                 ),
                               ),
                             ),
@@ -267,17 +428,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
-                    child: eventsAsync.whenOrNull(
-                          data: (events) => ProSectionHeader(
+                    child: RevealOnce.fromLeft(
+                      child: eventsAsync.whenOrNull(
+                            data: (events) => ProSectionHeader(
+                              title: 'Upcoming events',
+                              actionLabel: '${events.length} found',
+                              padding: EdgeInsets.zero,
+                            ),
+                          ) ??
+                          const ProSectionHeader(
                             title: 'Upcoming events',
-                            actionLabel: '${events.length} found',
                             padding: EdgeInsets.zero,
                           ),
-                        ) ??
-                        const ProSectionHeader(
-                          title: 'Upcoming events',
-                          padding: EdgeInsets.zero,
-                        ),
+                    ),
                   ),
                 ),
 
@@ -301,10 +464,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         delegate: SliverChildBuilderDelegate(
                           (_, i) => Padding(
                             padding: const EdgeInsets.only(bottom: 14),
-                            child: ProEventCard(
-                              event: events[i],
-                              onTap: () =>
-                                  context.push('/events/${events[i].id}'),
+                            // ✨ Partiful-style pop-in: each card reveals with
+                            // a staggered delay as you scroll down.
+                            child: ScrollReveal(
+                              key: ValueKey('event_card_$i'),
+                              index: i,
+                              staggerMs: 60,
+                              durationMs: 480,
+                              child: ProEventCard(
+                                event: events[i],
+                                onTap: () =>
+                                    context.push('/events/${events[i].id}'),
+                              ),
                             ),
                           ),
                           childCount: events.length,
@@ -349,20 +520,65 @@ class _SearchBar extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 50,
+        height: 52,
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             const SizedBox(width: 16),
-            Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
-            const SizedBox(width: 10),
-            Text(
-              'Search events, venues...',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.search_rounded,
+                  color: AppColors.primary, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Search events, artists, venues...',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded, size: 13, color: AppColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Filters',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -390,9 +606,9 @@ class _HeroBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: catColor.withValues(alpha: 0.22),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+              color: catColor.withValues(alpha: 0.25),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -405,10 +621,27 @@ class _HeroBanner extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: event.imageUrl!,
                       fit: BoxFit.cover,
-                      errorWidget: (_, _, _) =>
-                          _GradientFallback(category: event.category),
+                      placeholder: (_, _a) => _GradientFallback(category: event.category),
+                      errorWidget: (_, _a, _b) => _GradientFallback(category: event.category),
                     )
                   : _GradientFallback(category: event.category),
+
+              // Multi-layered cinema gradient
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x33000000),
+                      Colors.transparent,
+                      Color(0xD9000000),
+                      Color(0xFA000000),
+                    ],
+                    stops: [0.0, 0.25, 0.70, 1.0],
+                  ),
+                ),
+              ),
 
               // Bottom scrim for legibility
               Container(

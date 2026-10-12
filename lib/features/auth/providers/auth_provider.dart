@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../../core/network/dio_client.dart';
 import '../models/user_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -177,6 +178,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         
         await _firestore.collection('users').doc(credential.user!.uid).set(userModel.toJson());
         
+        // Trigger welcome email via Laravel API
+        try {
+          DioClient.instance.dio.post('/auth/send-welcome', data: {
+            'email': email,
+            'name': name,
+          });
+        } catch (_) {}
+        
         state = AsyncData(AuthState(isAuthenticated: true, user: userModel, token: 'firebase_token'));
       }
     } on FirebaseAuthException catch (e) {
@@ -230,6 +239,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             createdAt: DateTime.now(),
           );
           await _firestore.collection('users').doc(userCredential.user!.uid).set(userModel.toJson());
+          
+          // Trigger welcome email via Laravel API for new Google signups
+          try {
+            DioClient.instance.dio.post('/auth/send-welcome', data: {
+              'email': userModel.email,
+              'name': userModel.name,
+            });
+          } catch (_) {}
         } else {
           final data = doc.data()!;
           data['id'] = doc.id;

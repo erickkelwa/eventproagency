@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../../features/events/models/booking_model.dart';
+import '../../features/events/widgets/digital_ticket_modal.dart';
 import 'pro_badges.dart';
 
 /// ── Pro Booking Card ───────────────────────────────────────────────────────
@@ -413,6 +414,38 @@ class _TicketStub extends StatelessWidget {
                 color: AppColors.textPrimary.withValues(alpha: 0.55),
               ),
               const Spacer(),
+              if (!b.isCancelled)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => DigitalTicketModal.show(context, b),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.qr_code_rounded,
+                              size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'QR Pass',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

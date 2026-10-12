@@ -127,4 +127,23 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Token updated']);
     }
+
+    /**
+     * Trigger welcome email when a user registers via Firebase in the mobile/web app.
+     */
+    public function sendWelcomeNotification(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'name'  => 'nullable|string',
+        ]);
+
+        try {
+            app(BrevoMailService::class)->sendWelcome($request->email, $request->name ?? '');
+            return response()->json(['message' => 'Welcome email sent successfully']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('sendWelcomeNotification failed: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
