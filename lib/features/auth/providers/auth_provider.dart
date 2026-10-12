@@ -43,15 +43,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       if (doc.exists) {
         final userData = doc.data()!;
         userData['id'] = doc.id; // Map document ID to UserModel id
+        // Auto-assign admin if email matches master admin
+        if (firebaseUser.email?.toLowerCase() == 'erickkelwa9@gmail.com') {
+          userData['role'] = 'admin';
+        }
         final user = UserModel.fromJson(userData);
         return AuthState(isAuthenticated: true, user: user, token: 'firebase_token');
       } else {
         // Fallback if document doesn't exist yet
+        final isAdminEmail = firebaseUser.email?.toLowerCase() == 'erickkelwa9@gmail.com';
         final user = UserModel(
           id: firebaseUser.uid,
-          name: firebaseUser.displayName ?? 'User',
+          name: firebaseUser.displayName ?? 'Admin User',
           email: firebaseUser.email ?? '',
-          role: 'user',
+          role: isAdminEmail ? 'admin' : 'user',
           createdAt: DateTime.now(),
         );
         return AuthState(isAuthenticated: true, user: user, token: 'firebase_token');
