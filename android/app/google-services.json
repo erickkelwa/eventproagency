@@ -12,7 +12,20 @@
           "package_name": "com.eventpro.eventproagency"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "472380070338-e5q4usq34povc013h91dj4stro24fmjt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.eventpro.eventproagency",
+            "certificate_hash": "5f74c465690e0e247017840641520d6e98293607"
+          }
+        },
+        {
+          "client_id": "472380070338-0bea66mqm2smfciatf3qliptubo45n9u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCpi3Mi2dS3Oh1wTKnwaUYAkYV3J77xWIU"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "472380070338-0bea66mqm2smfciatf3qliptubo45n9u.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "472380070338-711npg4ct8roqagq175kcfab70doeotb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.eventpro.eventproagency"
+              }
+            }
+          ]
         }
       }
     }

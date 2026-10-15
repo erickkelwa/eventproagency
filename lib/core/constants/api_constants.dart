@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// EventPro API Route Constants
 class ApiConstants {
   ApiConstants._();
@@ -10,8 +8,14 @@ class ApiConstants {
   static const String productionBaseUrl = 'https://eventpro-api-709n.onrender.com/api';
   static const String ngrokBaseUrl      = 'https://errant-catnap-paparazzi.ngrok-free.dev/api';
 
-  // Live online Render URL for both Web and Mobile
-  static const String baseUrl = productionBaseUrl;
+  // Build-time override:
+  //   flutter run --dart-define=API_BASE_URL=http://192.168.1.209:8000/api
+  //   flutter build apk --dart-define=API_BASE_URL=http://192.168.1.209:8000/api
+  // If unset, falls back to productionBaseUrl (Render) for both web and APK.
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  static String get baseUrl =>
+      _envBaseUrl.isNotEmpty ? _envBaseUrl : productionBaseUrl;
 
   // ── Timeouts ──────────────────────────────────────────────
   static const int connectTimeout = 30000;
@@ -40,6 +44,7 @@ class ApiConstants {
   static const String adminReports      = '/admin/reports';
   static const String adminTransactions = '/admin/transactions';
   static const String adminUsers        = '/admin/users';
+  static const String adminIssues       = '/admin/issues';
 
   // ── Bookings ──────────────────────────────────────────────
   static const String bookings       = '/bookings';
