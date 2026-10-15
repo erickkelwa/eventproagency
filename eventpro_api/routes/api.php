@@ -65,5 +65,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/check-in',   [AdminController::class, 'checkIn']);
         Route::get('/reports',     [AdminController::class, 'reports']);
         Route::get('/users',       [AdminController::class, 'users']);
+        Route::get('/issues',      [AdminController::class, 'issues']);
     });
 });

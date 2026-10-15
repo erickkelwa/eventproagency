@@ -19,9 +19,11 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        Login::class => [
-            \App\Listeners\SendLoginSuccessEmail::class,
-        ],
+        // NOTE: A Login => App\Listeners\SendLoginSuccessEmail mapping was
+        // previously registered here, but the listener class was never
+        // created, causing every /auth/login call to throw a
+        // BindingResolutionException (HTTP 500). Removed to restore admin
+        // login. Add the listener back if a login-success email is desired.
     ];
 
     /**

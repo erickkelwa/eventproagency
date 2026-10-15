@@ -63,5 +63,8 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        // Role guard used by /admin/* routes (Route::middleware('role:admin')).
+        // Without this alias Laravel throws "Target class [role] does not exist".
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
     ];
 }

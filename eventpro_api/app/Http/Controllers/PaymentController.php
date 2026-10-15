@@ -44,6 +44,7 @@ class PaymentController extends Controller
             ? $cfg['production_base']
             : $cfg['sandbox_base'];
 
+        try {
             $token = $this->darajaToken($baseUrl, $key, $secret);
             if (!$token) {
                 // If Daraja sandbox token is unreachable, automatically fall back to simulation
