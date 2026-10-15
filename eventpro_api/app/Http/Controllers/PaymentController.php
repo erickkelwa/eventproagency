@@ -184,6 +184,58 @@ class PaymentController extends Controller
         return response()->json(['result' => 'OK'], 200);
     }
 
+    /**
+     * SAFE diagnostic: reports which Daraja config the LIVE server actually
+     * sees (booleans only, never the secret values) and whether it can reach
+     * the Daraja token endpoint. Use to confirm env vars are set after deploy.
+     * GET /payments/mpesa/diag
+     */
+    public function darajaDiag()
+    {
+        $cfg       = config('services.daraja');
+        $key       = $cfg['consumer_key']    ?? null;
+        $secret    = $cfg['consumer_secret'] ?? null;
+        $shortcode = $cfg['short_code']      ?? null;
+        $passkey   = $cfg['passkey']         ?? null;
+        $env       = $cfg['env'] ?? 'sandbox';
+        $baseUrl   = $env === 'production' ? $cfg['production_base'] : $cfg['sandbox_base'];
+
+        // Try a real token request to prove the server can reach Safaricom.
+        $tokenOk    = false;
+        $tokenError = null;
+        $tokenLen   = 0;
+        if ($key && $secret) {
+            try {
+                $res   = Http::withBasicAuth($key, $secret)
+                    ->timeout(15)
+                    ->get("{$baseUrl}/oauth/v1/generate?grant_type=client_credentials");
+                $token = $res->json('access_token');
+                $tokenOk = (bool) $token;
+                $tokenLen = $token ? strlen($token) : 0;
+                if (!$tokenOk) {
+                    $tokenError = 'HTTP ' . $res->status() . ' ' . ($res->json('errorMessage') ?? substr($res->body(), 0, 120));
+                }
+            } catch (\Throwable $e) {
+                $tokenError = $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'env'              => $env,
+            'base_url'         => $baseUrl,
+            'has_consumer_key' => (bool) $key,
+            'has_consumer_secret' => (bool) $secret,
+            'has_passkey'      => (bool) $passkey,
+            'has_shortcode'    => (bool) $shortcode,
+            'shortcode'        => $shortcode,
+            'callback_url'     => $cfg['callback_url'] ?? null,
+            'fallback_simulation' => env('DARAJA_FALLBACK_SIMULATION', false),
+            'daraja_reachable' => $tokenOk,
+            'token_length'     => $tokenLen,
+            'token_error'      => $tokenError,
+        ]);
+    }
+
     /** Mock STK push used when Daraja credentials are not configured. */
     private function stkPushMock(Request $request, string $phone)
     {

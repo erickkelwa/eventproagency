@@ -38,6 +38,7 @@ Route::post('/payments/paypal/capture', [PaymentController::class, 'paypalCaptur
 // depend on an authenticated user.
 Route::post('/payments/mpesa/stk-push',           [PaymentController::class, 'stkPush']);
 Route::post('/payments/mpesa/callback',           [PaymentController::class, 'mpesaCallback']);
+Route::get('/payments/mpesa/diag',                [PaymentController::class, 'darajaDiag']);
 Route::post('/payments/airtel/push',              [PaymentController::class, 'airtelPush']);
 Route::post('/payments/paypal/create-order',      [PaymentController::class, 'paypalCreateOrder']);
 Route::post('/payments/equity/charge',            [PaymentController::class, 'equityCharge']);
