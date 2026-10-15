@@ -54,6 +54,14 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
 
     final phone = _phoneCtrl.text.trim();
 
+    // Do NOT render a fake in-app M-Pesa PIN dialog here. Real M-Pesa PIN
+    // entry happens in a SYSTEM-level Safaricom push that originates from
+    // the network, not from this app. Asking the user for a PIN inside our
+    // UI is a security anti-pattern (users may type their real M-Pesa PIN)
+    // and it also does nothing to actually move money. Instead, we call the
+    // backend, which fires Daraja STK Push; Safaricom then pushes the PIN
+    // prompt to the user's handset. We navigate to the status screen which
+    // polls /payments/status/{id} until the callback flips it to completed.
     final user = ref.read(authStateProvider).valueOrNull?.user;
     final payment = await ref.read(paymentProvider.notifier).initiateStkPush(
           phone: phone,
