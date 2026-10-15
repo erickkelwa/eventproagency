@@ -52,9 +52,11 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
   Future<void> _initiatePayment() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final phone = _phoneCtrl.text.trim();
+
     final user = ref.read(authStateProvider).valueOrNull?.user;
     final payment = await ref.read(paymentProvider.notifier).initiateStkPush(
-          phone: _phoneCtrl.text.trim(),
+          phone: phone,
           amount: widget.amount,
           bookingType: widget.bookingType,
           bookingId: int.tryParse(widget.itemId) ?? 0,
