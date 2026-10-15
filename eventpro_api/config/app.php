@@ -125,6 +125,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Admin Read-Only Secret
+    |--------------------------------------------------------------------------
+    |
+    | Guards the /admin/*-data endpoints used by the static admin_web portal,
+    | which has no Sanctum login. The portal sends this value in the
+    | X-Admin-Secret header. Reuses ADMIN_SETUP_SECRET so there is a single
+    | secret to manage. Left null means the guard rejects every request.
+    |
+    */
+
+    'admin_secret' => env('ADMIN_SETUP_SECRET'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Autoloaded Service Providers
     |--------------------------------------------------------------------------
     |

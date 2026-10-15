@@ -46,6 +46,16 @@ Route::post('/payments/paystack/initialize',      [PaymentController::class, 'pa
 Route::get('/payments/paystack/callback',         [PaymentController::class, 'paystackCallback']);
 Route::post('/payments/paystack/webhook',         [PaymentController::class, 'paystackCallback']);
 
+// ── Admin Portal Data (guarded by X-Admin-Secret, no Sanctum login) ──
+// The static admin_web portal has no email/password login, so these read-only
+// endpoints are protected by the shared admin secret header instead.
+Route::middleware('admin.secret')->prefix('admin')->group(function () {
+    Route::get('/dashboard-data', [AdminController::class, 'dashboard']);
+    Route::get('/reports-data',   [AdminController::class, 'reports']);
+    Route::get('/users-data',     [AdminController::class, 'users']);
+    Route::get('/issues-data',    [AdminController::class, 'issues']);
+});
+
 // ── Protected Routes ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout',        [AuthController::class, 'logout']);

@@ -66,5 +66,8 @@ class Kernel extends HttpKernel
         // Role guard used by /admin/* routes (Route::middleware('role:admin')).
         // Without this alias Laravel throws "Target class [role] does not exist".
         'role' => \App\Http\Middleware\RoleMiddleware::class,
+        // Guards the read-only /admin/*-data endpoints used by the static
+        // admin_web portal via the X-Admin-Secret header (no Sanctum login).
+        'admin.secret' => \App\Http\Middleware\AdminSecretMiddleware::class,
     ];
 }

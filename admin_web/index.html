@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EventPro Admin — Central Operations & Live Event Platform</title>
+  <meta name="description" content="EventPro Agency Admin Portal — Real-time event management, ticketing, QR check-ins, vendor services, and financial reports.">
+  <meta name="theme-color" content="#0D0D0D">
+
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome 6 Pro CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- HTML5 QR Code Scanner CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <!-- EventPro Admin Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Ambient Glowing Background Orbs -->
+  <div class="ambient-glow-orb ambient-orb-1"></div>
+  <div class="ambient-glow-orb ambient-orb-2"></div>
+
+  <div class="app-container">
+    <!-- ── Sidebar Navigation ─────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-badge">
+          <img src="assets/eventpro_logo.jpg" alt="EventPro" onerror="this.innerHTML='<i class=\'fa-solid fa-sparkles\' style=\'color:#000;\'></i>'">
+        </div>
+        <div class="logo-text">
+          <h1>EventPro</h1>
+          <span>Agency Ops</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <span class="nav-section-title">Operations</span>
+        <a class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-view="events" id="nav-events">
+          <i class="fa-solid fa-calendar-star"></i>
+          <span>Events & Concerts</span>
+          <span class="nav-badge" id="badge-events">6</span>
+        </a>
+        <a class="nav-item" data-view="services" id="nav-services">
+          <i class="fa-solid fa-handshake-angle"></i>
+          <span>Vendor Services</span>
+        </a>
+
+        <span class="nav-section-title">Ticketing & Gate</span>
+        <a class="nav-item" data-view="bookings" id="nav-bookings">
+          <i class="fa-solid fa-ticket"></i>
+          <span>Bookings & Orders</span>
+        </a>
+        <a class="nav-item" data-view="checkin" id="nav-checkin">
+          <i class="fa-solid fa-qrcode"></i>
+          <span>QR Check-In Terminal</span>
+        </a>
+
+        <span class="nav-section-title">Finance & Access</span>
+        <a class="nav-item" data-view="reports" id="nav-reports">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Financial Reports</span>
+        </a>
+        <a class="nav-item" data-view="users" id="nav-users">
+          <i class="fa-solid fa-users"></i>
+          <span>Users & Staff</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-card">
+          <div class="user-avatar">EK</div>
+          <div class="user-meta">
+            <div class="name">Erick Kelwa</div>
+            <div class="role"><span class="role-dot"></span> Super Admin</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main App Content Wrapper ────────────────────────────── -->
+    <main class="main-wrapper">
+      <!-- Top App Bar Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle Navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="page-title-wrap">
+            <h2 id="page-title-text">Dashboard Overview</h2>
+            <span class="page-subtitle" id="page-subtitle-text">Real-time metrics, event sales & recent operations</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Global Search -->
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="global-search-input" placeholder="Search events, tickets, users...">
+            <span class="search-shortcut">/</span>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <button class="btn-primary" onclick="adminApp.openEventModal()" title="Add Event">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Event</span>
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button class="action-btn-circle" id="theme-toggle-btn" title="Toggle Light/Dark Theme">
+            <i class="fa-solid fa-sun" id="theme-toggle-icon"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <button class="action-btn-circle" onclick="adminApp.showToast('You have 2 new M-Pesa STK push payments confirmed!', 'info')" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notif-badge"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Dynamic Content Body -->
+      <section class="content-body" id="main-content-view">
+        <!-- Rendered dynamically by app.js -->
+      </section>
+    </main>
+  </div>
+
+  <!-- ── Modals ────────────────────────────────────────────────── -->
+
+  <!-- 1. Event Create/Edit Modal -->
+  <div class="modal-backdrop" id="event-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="event-modal-title">Create New Event</h3>
+        <button class="modal-close-btn" onclick="adminApp.closeModals()">&times;</button>
+      </div>
+      <form id="event-form" onsubmit="adminApp.saveEvent(event)">
+        <input type="hidden" id="event-id-field">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Event Title *</label>
+            <input type="text" id="event-title" class="form-control" placeholder="e.g. Sol Fest Africa 2026: The Grand Reunion" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select id="event-category" class="form-control" required>
+                <option value="Music">Music</option>
+                <option value="Sports">Sports</option>
+                <option value="Tech">Tech</option>
+                <option value="Art">Art</option>
+                <option value="Food">Food & Gourmet</option>
+                <option value="Business">Business</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Venue & Location *</label>
+              <input type="text" id="event-venue" class="form-control" placeholder="e.g. Uhuru Gardens Arena, Nairobi" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Ticket Price (KES) * (0 for Free)</label>
+              <input type="number" id="event-price" class="form-control" min="0" placeholder="3500" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total Capacity (Attendees) *</label>
+              <input type="number" id="event-capacity" class="form-control" min="1" placeholder="10000" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Tickets Already Booked</label>
+              <input type="number" id="event-booked" class="form-control" min="0" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Banner Image URL (Unsplash or direct URL)</label>
+              <input type="url" id="event-image" class="form-control" placeholder="https://images.unsplash.com/...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Full Event Description</label>
+            <textarea id="event-desc" class="form-control" rows="3" placeholder="Describe the live artist lineup, VIP perks, gates opening time..."></textarea>
+          </div>
+
+          <div class="form-group" style="display:flex; align-items:center; gap:0.6rem;">
+            <input type="checkbox" id="event-featured" style="width:18px; height:18px; accent-color:var(--primary);">
+            <label for="event-featured" style="font-size:0.88rem; font-weight:600; cursor:pointer;">
+              Promote on Home Screen Carousel (Featured Event)
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="adminApp.closeModals()">Cancel</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Service Create/Edit Modal -->
+  <div class="modal-backdrop" id="service-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="service-modal-title">Add Agency Vendor Service</h3>
+        <button class="modal-close-btn" onclick="adminApp.closeModals()">&times;</button>
+      </div>
+      <form id="service-form" onsubmit="adminApp.saveService(event)">
+        <input type="hidden" id="service-id-field">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Service Title *</label>
+            <input type="text" id="service-name" class="form-control" placeholder="e.g. Elite Catering & Cuisine" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select id="service-category" class="form-control" required>
+                <option value="Catering">Catering</option>
+                <option value="Photography">Photography & Cinema</option>
+                <option value="Security">Security & VIP Escort</option>
+                <option value="Transport">VVIP Transport & Shuttles</option>
+                <option value="Sound & Lighting">Sound, LED & Stage Lighting</option>
+                <option value="Decoration">Décor & Florals</option>
+                <option value="Entertainment">Live Entertainment & DJs</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vendor Company Name *</label>
+              <input type="text" id="service-vendor" class="form-control" placeholder="e.g. Chef Masters East Africa" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Base Starting Price (KES)</label>
+              <input type="number" id="service-baseprice" class="form-control" min="0" placeholder="5000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Price Range Description</label>
+              <input type="text" id="service-pricerange" class="form-control" placeholder="KES 3,500 – 15,000 per head">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Vendor Phone Contact</label>
+              <input type="tel" id="service-phone" class="form-control" placeholder="+254 712 345 678">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Image URL</label>
+              <input type="url" id="service-image" class="form-control" placeholder="https://images.unsplash.com/...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Service Scope & Description</label>
+            <textarea id="service-desc" class="form-control" rows="3" placeholder="Provide vendor qualifications, equipment specs, or packages included..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="adminApp.closeModals()">Cancel</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Vendor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Ticket Pass / Receipt Modal -->
+  <div class="modal-backdrop" id="ticket-modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Digital Gate Pass</h3>
+        <button class="modal-close-btn" onclick="adminApp.closeModals()">&times;</button>
+      </div>
+      <div class="modal-body" id="ticket-modal-body">
+        <!-- Rendered by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Stack -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

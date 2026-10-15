@@ -952,6 +952,14 @@ HTML;
             }
         }
 
+        if (!$email && $payment->phone) {
+            $user = \App\Models\User::where('phone', 'like', '%' . substr($payment->phone, -8))->first();
+            if ($user && $user->email) {
+                $email = $user->email;
+                if (!$name) $name = $user->name;
+            }
+        }
+
         if (!$email) {
             \Illuminate\Support\Facades\Log::info(
                 'Payment completed but no email found; skipped receipt email.',

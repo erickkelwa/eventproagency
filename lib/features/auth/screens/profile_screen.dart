@@ -22,14 +22,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _phoneCtrl = TextEditingController();
   bool _notificationsEnabled = true;
   bool _isEditing = false;
+  bool _hasPassword = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final user = ref.read(authStateProvider).valueOrNull?.user;
       _nameCtrl.text = user?.name ?? '';
       _phoneCtrl.text = user?.phone ?? '';
+      // Detect whether this account already has an Email/Password credential
+      // (Google-only sign-ins start without one).
+      final hasPw =
+          await ref.read(authStateProvider.notifier).hasPasswordProvider();
+      if (mounted) setState(() => _hasPassword = hasPw);
     });
   }
 
@@ -45,6 +51,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authState = ref.watch(authStateProvider);
     final user = authState.valueOrNull?.user;
     final bookingsAsync = ref.watch(bookingsProvider);
+    final userHasPassword = _hasPassword;
 
     // Stats derived from bookings
     final bookings = bookingsAsync.valueOrNull ?? [];
@@ -265,6 +272,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onTap: () => _showSupportModal(context),
                   ),
                   _QuickLink(
+                    icon: Icons.lock_outline_rounded,
+                    label: userHasPassword
+                        ? 'Change Password'
+                        : 'Set Password (enable email sign-in)',
+                    iconColor: AppColors.secondary,
+                    onTap: () => _showSetPasswordModal(context),
+                  ),
+                  _QuickLink(
                     icon: Icons.privacy_tip_outlined,
                     label: 'Privacy Policy',
                     iconColor: AppColors.textMuted,
@@ -322,6 +337,179 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  void _showSetPasswordModal(BuildContext context) {
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool submitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.lock_outline_rounded,
+                            color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          _hasPassword ? 'Change Password' : 'Set Password',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _hasPassword
+                          ? 'Choose a new password for your account.'
+                          : 'You signed in with Google. Set a password to also enable email sign-in and "Forgot password" resets.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: newPwCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'New password (min 8 characters)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmPwCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm password',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: submitting
+                            ? null
+                            : () async {
+                                final pw = newPwCtrl.text;
+                                if (pw.length < 8) {
+                                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Password must be at least 8 characters.'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                if (pw != confirmPwCtrl.text) {
+                                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Passwords do not match.'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setSheetState(() => submitting = true);
+                                try {
+                                  final msg = await ref
+                                      .read(authStateProvider.notifier)
+                                      .setPassword(pw);
+                                  if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+                                  final hasPw = await ref
+                                      .read(authStateProvider.notifier)
+                                      .hasPasswordProvider();
+                                  if (mounted) {
+                                    setState(() => _hasPassword = hasPw);
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(msg),
+                                        backgroundColor: AppColors.success,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setSheetState(() => submitting = false);
+                                  if (sheetCtx.mounted) {
+                                    ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                      SnackBar(
+                                        content: Text('$e'),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: submitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(
+                                _hasPassword ? 'Update Password' : 'Set Password',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      newPwCtrl.dispose();
+      confirmPwCtrl.dispose();
+    });
   }
 
   void _showSupportModal(BuildContext context) {

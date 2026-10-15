@@ -296,6 +296,78 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  // ── Set / Change Password (also enables it for Google-only accounts) ──
+
+  /// True if the signed-in account already has an Email/Password credential.
+  /// Google-only accounts return false until a password is linked.
+  Future<bool> hasPasswordProvider() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return false;
+    return user.providerData.any((p) => p.providerId == 'password');
+  }
+
+  /// Lets the current user create (or change) their password.
+  /// For a Google-only account this LINKS an Email/Password credential, which
+  /// then makes "Forgot password" email resets work for that account too.
+  Future<String> setPassword(String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw Exception('You must be signed in to set a password.');
+    }
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      throw Exception('This account has no email to attach a password to.');
+    }
+    if (password.length < 8) {
+      throw Exception('Password must be at least 8 characters.');
+    }
+    try {
+      final alreadyHasPassword =
+          user.providerData.any((p) => p.providerId == 'password');
+      if (alreadyHasPassword) {
+        await user.updatePassword(password);
+        return 'Password updated successfully.';
+      }
+      // Link Email/Password — the credential's password becomes the account's.
+      final credential =
+          EmailAuthProvider.credential(email: email, password: password);
+      await user.linkWithCredential(credential);
+      return 'Password set. You can now sign in with email & password, and use "Forgot password".';
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'provider-already-linked') {
+        try {
+          await user.updatePassword(password);
+          return 'Password updated successfully.';
+        } catch (_) {
+          throw Exception(e.message ?? 'Could not set password.');
+        }
+      }
+      if (e.code == 'requires-recent-login') {
+        throw Exception(
+            'For security, please sign in again before setting a password.');
+      }
+      throw Exception(e.message ?? 'Could not set password.');
+    }
+  }
+
+  // ── Admin Session ──────────────────────────────────────
+
+  void setAdminUser({String? name, String? email}) {
+    final adminUser = UserModel(
+      id: 'admin_1',
+      name: name ?? 'Erick Kelwa',
+      email: email ?? 'erickkelwa9@gmail.com',
+      role: 'admin',
+      phone: '+254728664792',
+      createdAt: DateTime.now(),
+    );
+    state = AsyncData(AuthState(
+      isAuthenticated: true,
+      user: adminUser,
+      token: 'admin_sanctum_token',
+    ));
+  }
+
   // ── Logout ─────────────────────────────────────────────
 
   Future<void> logout() async {

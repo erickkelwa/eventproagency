@@ -29,16 +29,20 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
   static const _brandGradient = [Color(0xFF00A651), Color(0xFF007A3C)];
 
   final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill phone from user profile if available
+    // Pre-fill phone and email from user profile if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(authStateProvider).valueOrNull?.user;
       if (user?.phone != null && _phoneCtrl.text.isEmpty) {
         _phoneCtrl.text = user!.phone!;
+      }
+      if (user?.email != null && user!.email.isNotEmpty && _emailCtrl.text.isEmpty) {
+        _emailCtrl.text = user.email;
       }
     });
   }
@@ -46,6 +50,7 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
   @override
   void dispose() {
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -53,22 +58,20 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final phone = _phoneCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
 
-    // Do NOT render a fake in-app M-Pesa PIN dialog here. Real M-Pesa PIN
-    // entry happens in a SYSTEM-level Safaricom push that originates from
-    // the network, not from this app. Asking the user for a PIN inside our
-    // UI is a security anti-pattern (users may type their real M-Pesa PIN)
-    // and it also does nothing to actually move money. Instead, we call the
-    // backend, which fires Daraja STK Push; Safaricom then pushes the PIN
-    // prompt to the user's handset. We navigate to the status screen which
-    // polls /payments/status/{id} until the callback flips it to completed.
+    // Real M-Pesa PIN entry is a SYSTEM-level popup pushed by Safaricom's
+    // network (STK Push) — it must NEVER be rendered inside this app. We call
+    // the backend, which fires the Daraja STK Push to the user's handset; the
+    // user then enters their PIN in Safaricom's own prompt. We navigate to the
+    // status screen, which polls /payments/status/{id} until it completes.
     final user = ref.read(authStateProvider).valueOrNull?.user;
     final payment = await ref.read(paymentProvider.notifier).initiateStkPush(
           phone: phone,
           amount: widget.amount,
           bookingType: widget.bookingType,
           bookingId: int.tryParse(widget.itemId) ?? 0,
-          email: user?.email,
+          email: email.isNotEmpty ? email : user?.email,
           fcmToken: user?.fcmToken ?? NotificationService.cachedToken,
         );
 
@@ -112,7 +115,7 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
         isLoading: paymentState.isLoading,
         onPay: _initiatePayment,
         note:
-            'You\'ll receive an M-Pesa push notification on your phone. Enter your PIN to complete the payment.',
+            'You\'ll receive an M-Pesa push notification on your phone. Enter your PIN to complete the payment. A confirmation receipt will be emailed to you.',
         formFields: [
           const CheckoutFieldLabel('M-Pesa Phone Number'),
           TextFormField(
@@ -123,6 +126,27 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
             decoration: const InputDecoration(
               hintText: '0712 345 678',
               prefixIcon: Icon(Icons.phone_rounded,
+                  color: AppColors.primary, size: 20),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const CheckoutFieldLabel('Email Address (for receipt confirmation)'),
+          TextFormField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            style: TextStyle(color: AppColors.textPrimary),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Please enter your email to receive receipt';
+              }
+              if (!v.contains('@') || !v.contains('.')) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
+            decoration: const InputDecoration(
+              hintText: 'your-email@example.com',
+              prefixIcon: Icon(Icons.email_outlined,
                   color: AppColors.primary, size: 20),
             ),
           ),

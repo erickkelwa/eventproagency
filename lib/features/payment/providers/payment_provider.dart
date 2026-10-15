@@ -60,15 +60,14 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       );
       return _handleSinglePaymentResponse(response);
     } catch (e) {
-      // Demo fallback
-      return await _demoPayment(
-        amount: amount,
-        phone: _normalizeKenyaPhone(phone),
-        bookingType: bookingType,
-        bookingId: bookingId,
-        method: PaymentMethod.mpesa,
-        receiptPrefix: 'MP',
-      );
+      // Do NOT fabricate a successful payment here. Previously any network /
+      // validation error fell through to a fake "completed" payment, so the
+      // status screen flashed "Payment Successful" before the user ever
+      // entered their PIN. Surface the real error instead; a genuine STK push
+      // returns status=pending from the backend (handled above) and the status
+      // screen then polls until Safaricom confirms the PIN.
+      state = PaymentState(error: 'M-Pesa request failed: $e');
+      return null;
     }
   }
 
@@ -234,11 +233,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       return payment;
     }
     throw Exception(response.data['error'] ?? 'Payment initiation failed');
-  }
-
-  PaymentModel? _handleError(Object e) {
-    state = PaymentState(error: e.toString());
-    return null;
   }
 
   /// Generates a demo/mock payment for when the backend is unreachable.
