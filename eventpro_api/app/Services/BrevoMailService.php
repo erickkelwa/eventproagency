@@ -17,13 +17,15 @@ class BrevoMailService
     }
 
     // ── Payment Receipt ──────────────────────────────────────
-    public function sendReceipt($email, $name, $amount, $transactionId)
+    public function sendReceipt($email, $name, $amount, $transactionId, $eventName = null)
     {
         $displayName  = $name ?: 'Valued Customer';
         $formattedAmt = 'KES ' . number_format((float) $amount, 2);
         $date         = now()->format('F j, Y \a\t g:i A');
-        $html         = $this->buildReceiptHtml($displayName, $formattedAmt, $transactionId, $date);
-        $subject      = '✅ Payment Confirmed — EventPro Agency (#' . $transactionId . ')';
+        $html         = $this->buildReceiptHtml($displayName, $formattedAmt, $transactionId, $date, $eventName);
+        $subject      = $eventName
+            ? '🎟️ Ticket Confirmed — ' . $eventName . ' (#' . $transactionId . ')'
+            : '✅ Payment Confirmed — EventPro Agency (#' . $transactionId . ')';
 
         try {
             Mail::html($html, function ($message) use ($email, $displayName, $subject) {
@@ -162,8 +164,21 @@ class BrevoMailService
 HTML;
     }
 
-    private function buildReceiptHtml(string $name, string $amount, string $transactionId, string $date): string
+    private function buildReceiptHtml(string $name, string $amount, string $transactionId, string $date, ?string $eventName = null): string
     {
+        $eventRow = '';
+        if ($eventName) {
+            $safeEvent = htmlspecialchars($eventName, ENT_QUOTES, 'UTF-8');
+            $eventRow = <<<ROW
+                <tr>
+                  <td style="padding:14px 24px;color:#888;font-size:13px;border-bottom:1px solid #e2e8f0;">Event / Ticket</td>
+                  <td style="padding:14px 24px;color:#1a1a2e;font-size:13px;font-weight:600;border-bottom:1px solid #e2e8f0;">{$safeEvent}</td>
+                </tr>
+ROW;
+        }
+
+        $mainHeading = $eventName ? '🎟️ Ticket Confirmed!' : 'Payment Confirmed!';
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -190,7 +205,7 @@ HTML;
               <div style="margin-top:24px;background:rgba(255,255,255,0.08);border-radius:50%;width:64px;height:64px;margin-left:auto;margin-right:auto;display:flex;align-items:center;justify-content:center;">
                 <span style="font-size:32px;line-height:64px;">✅</span>
               </div>
-              <h1 style="color:#ffffff;font-size:26px;font-weight:700;margin:16px 0 8px;">Payment Confirmed!</h1>
+              <h1 style="color:#ffffff;font-size:26px;font-weight:700;margin:16px 0 8px;">{$mainHeading}</h1>
               <p style="color:rgba(255,255,255,0.7);font-size:14px;margin:0;">Your transaction was processed successfully.</p>
             </td>
           </tr>
@@ -219,6 +234,7 @@ HTML;
                 </tr>
 
                 <!-- Details rows -->
+                {$eventRow}
                 <tr>
                   <td style="padding:14px 24px;color:#888;font-size:13px;border-bottom:1px solid #e2e8f0;width:40%;">Transaction ID</td>
                   <td style="padding:14px 24px;color:#1a1a2e;font-size:13px;font-weight:600;border-bottom:1px solid #e2e8f0;font-family:monospace;">#{$transactionId}</td>

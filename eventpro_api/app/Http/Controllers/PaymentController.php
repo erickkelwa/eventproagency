@@ -572,7 +572,14 @@ class PaymentController extends Controller
      */
     public function receipt($transactionId)
     {
-        $payment = Payment::where('transaction_id', $transactionId)->firstOrFail();
+        $payment = Payment::where('transaction_id', $transactionId)
+            ->orWhere('receipt_number', $transactionId)
+            ->orWhere('mpesa_receipt_number', $transactionId)
+            ->orWhere(function ($q) use ($transactionId) {
+                $q->where('booking_id', $transactionId);
+            })
+            ->latest('id')
+            ->firstOrFail();
 
         $status     = ucfirst($payment->status ?? 'unknown');
         $amount     = 'KES ' . number_format((float) $payment->amount, 2);
@@ -671,8 +678,19 @@ HTML;
                 ]);
                 $this->markBookingComplete($payment->fresh());
                 $this->notifyPaymentCompleted($payment->fresh());
-            } elseif ($resultCode === 1 || $resultCode === 1032) {
-                // 1 / 1032 = Cancelled by user
+            } elseif ($resultCode === 1) {
+                // In stkpushquery, ResultCode 1 means "The transaction is being
+                // processed at initiator" — the STK prompt is still OPEN on the
+                // customer's phone waiting for the PIN. Do NOT mark it failed or
+                // cancelled here; only trust an explicit cancel in the description.
+                $desc = strtolower($data['ResultDesc'] ?? '');
+                if (str_contains($desc, 'cancel')) {
+                    $payment->update(['status' => 'cancelled']);
+                }
+                // Otherwise leave status pending until the PIN is entered,
+                // the prompt is cancelled (1032), or it expires (1037).
+            } elseif ($resultCode === 1032) {
+                // 1032 = Cancelled by customer on their phone
                 $payment->update(['status' => 'cancelled']);
             } elseif ($resultCode === 1037 || $resultCode === 2001) {
                 // 1037 = Timeout / user took too long to enter PIN
@@ -970,7 +988,7 @@ HTML;
 
         try {
             app(BrevoMailService::class)
-                ->sendReceipt($email, $name, $payment->amount, $payment->transaction_id);
+                ->sendReceipt($email, $name, $payment->amount, $payment->transaction_id, $eventName);
             \Illuminate\Support\Facades\Log::info("Receipt email sent successfully for payment #{$payment->transaction_id} to {$email}");
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Receipt email failed: ' . $e->getMessage());
