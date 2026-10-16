@@ -394,6 +394,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   // ── Logout ─────────────────────────────────────────────
 
   Future<void> logout() async {
+    // Drop the cached Sanctum token as well. On a shared device (e.g. a demo
+    // handover) a leftover Bearer token makes every later API call — including
+    // payment/receipt lookups — run as the PREVIOUS user, which is how someone
+    // else's ticket data surfaced in the app.
+    try {
+      await DioClient.instance.clearAuthToken();
+    } catch (_) {}
     await _googleSignIn.signOut();
     await _firebaseAuth.signOut();
     state = const AsyncData(AuthState());

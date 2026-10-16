@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class BookingModel extends Equatable {
@@ -55,13 +56,11 @@ class BookingModel extends Equatable {
       v is String ? v : (v?.toString() ?? fallback);
 
   static DateTime _toDate(dynamic v, DateTime fallback) {
-    if (v is Timestamp) {
-      return v.toDate();
-    }
-    if (v is int) {
-      return DateTime.fromMillisecondsSinceEpoch(v);
-    }
-    return DateTime.tryParse(_toStr(v)) ?? fallback;
+    if (v is Timestamp) return v.toDate();
+    if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+    final raw = _toStr(v);
+    if (raw.isEmpty) return fallback;
+    return DateTime.tryParse(raw) ?? fallback;
   }
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {

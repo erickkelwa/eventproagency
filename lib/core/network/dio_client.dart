@@ -12,6 +12,10 @@ class DioClient {
 
   Dio get dio => _dio;
 
+  /// Remove the stored Sanctum token (called on logout so the next person using
+  /// this device is not sent along as the previous user).
+  Future<void> clearAuthToken() => _storage.delete(key: 'sanctum_token');
+
   void init() {
     _dio = Dio(
       BaseOptions(

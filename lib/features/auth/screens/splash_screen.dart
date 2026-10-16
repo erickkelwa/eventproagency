@@ -41,8 +41,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after animation
-    Future.delayed(const Duration(milliseconds: 3000), _navigate);
+    // Navigate after animation. Kept short on purpose — the previous 3s hold
+    // made the app feel like it was "loading" long after everything was ready.
+    Future.delayed(const Duration(milliseconds: 1200), _navigate);
   }
 
   void _navigate() {

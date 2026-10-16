@@ -284,7 +284,14 @@ class DigitalTicketModal extends StatelessWidget {
             height: 46,
             child: OutlinedButton.icon(
               onPressed: () async {
-                final refId = b.ticketCode.isNotEmpty ? b.ticketCode : b.id;
+                // The server only serves receipts by the payment reference
+                // (EP…). Ticket codes/booking doc ids are NOT payment ids, and
+                // sending them used to fall back to booking_id lookups that
+                // could return another customer's receipt.
+                final refId = b.transactionId ??
+                    (b.ticketCode.startsWith('EP-TKT-')
+                        ? b.ticketCode.substring('EP-TKT-'.length)
+                        : (b.ticketCode.isNotEmpty ? b.ticketCode : b.id));
                 final rawPath = ApiConstants.downloadReceipt.replaceAll('{id}', refId);
                 final fullUrl = rawPath.startsWith('http') ? rawPath : '${ApiConstants.baseUrl}$rawPath';
                 final uri = Uri.parse(fullUrl);

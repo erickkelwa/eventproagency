@@ -38,11 +38,11 @@ void main() async {
   DioClient.instance.init();
 
   // ── Push notifications (FCM) ─────────────────────────────
-  // Restore any cached device token immediately, then request permission and
-  // refresh it in the background (non-blocking) so payment pushes can be sent.
-  await NotificationService.instance.loadCachedToken();
+  // Never block startup on this: the cached token is read in the background so
+  // the first frame paints immediately (a cold start used to wait on storage +
+  // a network round-trip to Fetch before the UI appeared).
   // ignore: unawaited_futures, discarded_futures
-  NotificationService.instance.ensureToken();
+  NotificationService.instance.initAsync();
 
   runApp(
     const ProviderScope(

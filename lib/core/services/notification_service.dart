@@ -78,6 +78,14 @@ class NotificationService {
     cachedToken = prefs.getString(_tokenKey);
   }
 
+  /// Non-blocking startup: restore the cached token, then fetch/refresh it in
+  /// the background. Keeps cold start fast (the old code awaited both before
+  /// runApp, so the splash waited on storage + Firebase network I/O).
+  Future<void> initAsync() async {
+    await loadCachedToken();
+    ensureToken();
+  }
+
   /// Persist the token onto the authenticated user's Firestore document.
   Future<String?> saveTokenForUser(String uid) async {
     final token = await ensureToken();
