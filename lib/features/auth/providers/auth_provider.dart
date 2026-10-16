@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/network/dio_client.dart';
 import '../models/user_model.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
 // ── Providers ──────────────────────────────────────────────
 
@@ -199,15 +199,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           createdAt: DateTime.now(),
         );
         
-        await _firestore.collection('users').doc(credential.user!.uid).set(userModel.toJson());
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          ...userModel.toJson(),
+          'welcome_sent_at': FieldValue.serverTimestamp(),
+        });
         
         // Trigger welcome email via Laravel API
         try {
-          DioClient.instance.dio.post('/auth/send-welcome', data: {
+          await DioClient.instance.dio.post('/auth/send-welcome', data: {
             'email': email,
             'name': name,
           });
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Welcome email trigger failed: $e');
+        }
         
         state = AsyncData(AuthState(isAuthenticated: true, user: userModel, token: 'firebase_token'));
       }
@@ -251,7 +256,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         final doc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
         
         UserModel userModel;
-        
+        bool needsWelcome = false;
+
         if (!doc.exists) {
           // First time Google login, create Firestore document
           userModel = UserModel(
@@ -261,19 +267,36 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             role: 'user',
             createdAt: DateTime.now(),
           );
-          await _firestore.collection('users').doc(userCredential.user!.uid).set(userModel.toJson());
-          
-          // Trigger welcome email via Laravel API for new Google signups
-          try {
-            DioClient.instance.dio.post('/auth/send-welcome', data: {
-              'email': userModel.email,
-              'name': userModel.name,
-            });
-          } catch (_) {}
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({...userModel.toJson(), 'welcome_sent_at': FieldValue.serverTimestamp()});
+          needsWelcome = true;
         } else {
           final data = doc.data()!;
           data['id'] = doc.id;
           userModel = UserModel.fromJson(data);
+          // Legacy accounts created before the welcome flag — send once
+          if (data['welcome_sent_at'] == null &&
+              (userModel.email.isNotEmpty)) {
+            needsWelcome = true;
+            _firestore
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .update({'welcome_sent_at': FieldValue.serverTimestamp()});
+          }
+        }
+
+        // Trigger welcome email via Laravel API for new Google signups
+        if (needsWelcome && userModel.email.isNotEmpty) {
+          try {
+            await DioClient.instance.dio.post('/auth/send-welcome', data: {
+              'email': userModel.email,
+              'name': userModel.name,
+            });
+          } catch (e) {
+            debugPrint('Welcome email trigger failed: $e');
+          }
         }
         
         state = AsyncData(AuthState(isAuthenticated: true, user: userModel, token: 'firebase_token'));

@@ -106,25 +106,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo Icon
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.5),
-                              blurRadius: 40,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.event_rounded,
-                          size: 52,
-                          color: Colors.white,
+                      // Logo Image
+                      Image.asset(
+                        'assets/images/eventpro_logo.jpg',
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.5),
+                                blurRadius: 40,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.event_rounded,
+                            size: 52,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/services/notification_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/payment_provider.dart';
+import '../utils/payment_route_args.dart';
 import '../widgets/checkout_shell.dart';
 
 /// Airtel Money push checkout.
@@ -12,12 +13,16 @@ class AirtelCheckoutScreen extends ConsumerStatefulWidget {
   final String bookingType; // 'event' | 'service'
   final String itemId;
   final double amount;
+  final String? itemTitle;
+  final int quantity;
 
   const AirtelCheckoutScreen({
     super.key,
     required this.bookingType,
     required this.itemId,
     required this.amount,
+    this.itemTitle,
+    this.quantity = 1,
   });
 
   @override
@@ -27,6 +32,13 @@ class AirtelCheckoutScreen extends ConsumerStatefulWidget {
 
 class _AirtelCheckoutScreenState extends ConsumerState<AirtelCheckoutScreen> {
   static const _brandGradient = [Color(0xFFE40000), Color(0xFF9B0000)];
+
+  String get _displayTitle => (widget.itemTitle != null &&
+          widget.itemTitle!.trim().isNotEmpty)
+      ? widget.itemTitle!.trim()
+      : (widget.bookingType == 'event'
+          ? 'Event Ticket #${widget.itemId}'
+          : 'Service Booking #${widget.itemId}');
 
   final _phoneCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -60,14 +72,23 @@ class _AirtelCheckoutScreenState extends ConsumerState<AirtelCheckoutScreen> {
           bookingId: int.tryParse(widget.itemId) ?? 0,
           email: user?.email,
           fcmToken: user?.fcmToken ?? NotificationService.cachedToken,
+          itemTitle: _displayTitle,
+          quantity: widget.quantity,
         );
 
     if (!mounted) return;
 
     if (payment != null) {
-      context.pushReplacement('/payment-status/${payment.transactionId}');
+      context.pushReplacement(paymentStatusLocation(
+        transactionId: payment.transactionId,
+        bookingType: widget.bookingType,
+        itemId: widget.itemId,
+        itemTitle: _displayTitle,
+        quantity: widget.quantity,
+      ));
     } else {
-      _showError(ref.read(paymentProvider).error ?? 'Payment initiation failed');
+      _showError(ref.read(paymentProvider).error ??
+          'We could not start the Airtel Money request. No payment has been taken.');
     }
   }
 
@@ -84,9 +105,7 @@ class _AirtelCheckoutScreenState extends ConsumerState<AirtelCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
-    final itemTitle = widget.bookingType == 'event'
-        ? 'Event Ticket #${widget.itemId}'
-        : 'Service Booking #${widget.itemId}';
+    final itemTitle = _displayTitle;
 
     return Form(
       key: _formKey,

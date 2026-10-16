@@ -179,13 +179,14 @@ class AppSideDrawer extends ConsumerWidget {
                   ),
 
 
+                  const SizedBox(height: 16),
+                  _DrawerSectionLabel('ADMIN & MANAGEMENT'),
                   if (user?.isAdmin == true) ...[
-                    const SizedBox(height: 16),
-                    // Admin Control Center Banner
+                    // Admin Control Center Banner (Full Access)
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(context);
-                        context.push(AppRoutes.adminLogin);
+                        context.push(AppRoutes.adminDashboard);
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -238,9 +239,9 @@ class AppSideDrawer extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Revenue - Events - Analytics',
+                                    'Revenue • Events • Analytics',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.white.withValues(alpha: 0.85),
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -260,7 +261,7 @@ class AppSideDrawer extends ConsumerWidget {
                     _DrawerTile(
                       icon: Icons.people_alt_rounded,
                       title: 'User Management',
-                      subtitle: 'View and manage attendees',
+                      subtitle: 'View attendees & resolve issues',
                       color: const Color(0xFF06B6D4),
                       onTap: () {
                         Navigator.pop(context);
@@ -275,6 +276,28 @@ class AppSideDrawer extends ConsumerWidget {
                       onTap: () {
                         Navigator.pop(context);
                         context.push(AppRoutes.adminEvents);
+                      },
+                    ),
+                    _DrawerTile(
+                      icon: Icons.qr_code_scanner_rounded,
+                      title: 'Gate Pass QR Scanner',
+                      subtitle: 'Verify tickets & check in guests',
+                      color: const Color(0xFF10B981),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.adminQrScanner);
+                      },
+                    ),
+                  ] else ...[
+                    // Staff / Admin Portal Quick Access
+                    _DrawerTile(
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'Admin Portal',
+                      subtitle: 'Organizer & Staff Access (1-Tap Login)',
+                      color: const Color(0xFF7C3AED),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppRoutes.adminLogin);
                       },
                     ),
                   ],

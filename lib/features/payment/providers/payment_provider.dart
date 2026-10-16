@@ -43,6 +43,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required int bookingId,
     String? email,
     String? fcmToken,
+    String? itemTitle,
+    int quantity = 1,
   }) async {
     state = const PaymentState(isLoading: true);
     try {
@@ -56,6 +58,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
           'booking_id': bookingId,
           if (email != null && email.isNotEmpty) 'email': email,
           if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
+          if (itemTitle != null && itemTitle.isNotEmpty) 'item_title': itemTitle,
+          'quantity': quantity < 1 ? 1 : quantity,
         },
       );
       return _handleSinglePaymentResponse(response);
@@ -66,7 +70,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       // entered their PIN. Surface the real error instead; a genuine STK push
       // returns status=pending from the backend (handled above) and the status
       // screen then polls until Safaricom confirms the PIN.
-      state = PaymentState(error: 'M-Pesa request failed: $e');
+      state = PaymentState(error: _readableError(e, 'M-Pesa request failed'));
       return null;
     }
   }
@@ -81,6 +85,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required int bookingId,
     String? email,
     String? fcmToken,
+    String? itemTitle,
+    int quantity = 1,
   }) async {
     state = const PaymentState(isLoading: true);
     try {
@@ -94,11 +100,19 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
           'booking_id': bookingId,
           if (email != null && email.isNotEmpty) 'email': email,
           if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
+          if (itemTitle != null && itemTitle.isNotEmpty) 'item_title': itemTitle,
+          'quantity': quantity < 1 ? 1 : quantity,
         },
       );
       return _handleSinglePaymentResponse(response);
     } catch (e) {
-      // Demo fallback
+      // Only simulate when the server could not be reached at all. A real HTTP
+      // error (422/500) must surface, otherwise the app reports "Payment
+      // Successful" for a push the customer never approved with their PIN.
+      if (!_isUnreachable(e)) {
+        state = PaymentState(error: _readableError(e, 'Airtel Money request failed'));
+        return null;
+      }
       return await _demoPayment(
         amount: amount,
         phone: _normalizePhone(phone),
@@ -120,6 +134,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required String currency,
     required String bookingType,
     required int bookingId,
+    String? email,
+    String? itemTitle,
+    int quantity = 1,
   }) async {
     state = const PaymentState(isLoading: true);
     try {
@@ -130,6 +147,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
           'currency': currency,
           'booking_type': bookingType,
           'booking_id': bookingId,
+          if (email != null && email.isNotEmpty) 'email': email,
+          if (itemTitle != null && itemTitle.isNotEmpty) 'item_title': itemTitle,
+          'quantity': quantity < 1 ? 1 : quantity,
         },
       );
       if (response.statusCode == 200 && response.data != null) {
@@ -174,7 +194,12 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       );
       return _handleSinglePaymentResponse(response);
     } catch (e) {
-      // Demo fallback
+      // Only simulate when the API is genuinely unreachable; an HTTP error
+      // must never be turned into a "Payment Successful" screen.
+      if (!_isUnreachable(e)) {
+        state = PaymentState(error: _readableError(e, 'PayPal capture failed'));
+        return null;
+      }
       return await _demoPayment(
         amount: amount,
         phone: 'paypal',
@@ -196,6 +221,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required int bookingId,
     required String paymentSubtype, // 'eazzypay' | 'card'
     String? phone,
+    String? email,
+    String? itemTitle,
+    int quantity = 1,
   }) async {
     state = const PaymentState(isLoading: true);
     try {
@@ -207,10 +235,17 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
           'booking_id': bookingId,
           'payment_subtype': paymentSubtype,
           if (phone != null) 'phone': _normalizeKenyaPhone(phone),
+          if (email != null && email.isNotEmpty) 'email': email,
+          if (itemTitle != null && itemTitle.isNotEmpty) 'item_title': itemTitle,
+          'quantity': quantity < 1 ? 1 : quantity,
         },
       );
       return _handleSinglePaymentResponse(response);
     } catch (e) {
+      if (!_isUnreachable(e)) {
+        state = PaymentState(error: _readableError(e, 'Equity Bank request failed'));
+        return null;
+      }
       return await _demoPayment(
         amount: amount,
         phone: phone ?? 'card',
@@ -298,6 +333,51 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     return List.generate(length, (_) => chars[_random.nextInt(chars.length)])
         .join();
+  }
+
+  /// True only when the API could not be reached at all (offline, DNS, TLS,
+  /// timeouts, or a response that never arrived). Server-side rejections
+  /// (422/500) return false so they are reported instead of mocked away.
+  bool _isUnreachable(Object e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      final hasServerAnswered = status != null && status > 0;
+      if (hasServerAnswered) return false;
+      return const {
+        DioExceptionType.connectionTimeout,
+        DioExceptionType.sendTimeout,
+        DioExceptionType.receiveTimeout,
+        DioExceptionType.connectionError,
+        DioExceptionType.unknown,
+      }.contains(e.type);
+    }
+    return false;
+  }
+
+  /// Turn a raw Dio/HTTP failure into a message that does not lie about the
+  /// payment: the customer must never see "successful" or "failed" for a PIN
+  /// prompt they have not answered yet.
+  String _readableError(Object e, String prefix) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      final serverMsg = data is Map<String, dynamic>
+          ? (data['error'] ?? data['message'] ?? data['detail'])?.toString()
+          : null;
+      if (serverMsg != null && serverMsg.isNotEmpty) {
+        return '$prefix: $serverMsg';
+      }
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return '$prefix: the payment service timed out. No money has been taken — please try again.';
+        case DioExceptionType.connectionError:
+          return '$prefix: could not reach the payment service. Check your connection.';
+        default:
+          return '$prefix: payment service error (${e.response?.statusCode ?? 'unreachable'}).';
+      }
+    }
+    return '$prefix: $e';
   }
 
   void reset() => state = const PaymentState();

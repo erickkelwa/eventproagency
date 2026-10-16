@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/api_constants.dart';
 import '../models/booking_model.dart';
 import '../../../core/widgets/pro_badges.dart';
 
@@ -127,7 +129,7 @@ class DigitalTicketModal extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${DateFormat('MMM d, y · h:mm a').format(b.eventDate)}',
+                              DateFormat('MMM d, y · h:mm a').format(b.eventDate),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -268,6 +270,49 @@ class DigitalTicketModal extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Download Official Receipt Button
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final refId = b.ticketCode.isNotEmpty ? b.ticketCode : b.id;
+                final rawPath = ApiConstants.downloadReceipt.replaceAll('{id}', refId);
+                final fullUrl = rawPath.startsWith('http') ? rawPath : '${ApiConstants.baseUrl}$rawPath';
+                final uri = Uri.parse(fullUrl);
+                try {
+                  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (!launched) await launchUrl(uri);
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not open receipt'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primary),
+              label: const Text(
+                'Download Receipt (PDF / Web)',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),

@@ -1,28 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../notifications/providers/notifications_provider.dart';
 
-class NotificationItem {
-  final String id;
-  final String title;
-  final String message;
-  final DateTime time;
-  final IconData icon;
-  final Color color;
-  final bool isRead;
-
-  const NotificationItem({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.time,
-    required this.icon,
-    required this.color,
-    this.isRead = false,
-  });
-}
-
-class NotificationsModal extends StatefulWidget {
+class NotificationsModal extends ConsumerWidget {
   const NotificationsModal({super.key});
 
   static void show(BuildContext context) {
@@ -35,51 +17,10 @@ class NotificationsModal extends StatefulWidget {
   }
 
   @override
-  State<NotificationsModal> createState() => _NotificationsModalState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifications = ref.watch(notificationsProvider);
+    final unreadCount = notifications.where((n) => !n.isRead).length;
 
-class _NotificationsModalState extends State<NotificationsModal> {
-  final List<NotificationItem> _notifications = [
-    NotificationItem(
-      id: '1',
-      title: 'Payment Confirmed 🎉',
-      message: 'M-Pesa STK payment for Sol Generation VIP Pass was confirmed.',
-      time: DateTime.now().subtract(const Duration(minutes: 15)),
-      icon: Icons.check_circle_rounded,
-      color: AppColors.success,
-      isRead: false,
-    ),
-    NotificationItem(
-      id: '2',
-      title: 'Event Reminder ⏰',
-      message: 'Nairobi Tech Summit kicks off tomorrow at 9:00 AM at Sarit Expo.',
-      time: DateTime.now().subtract(const Duration(hours: 3)),
-      icon: Icons.alarm_rounded,
-      color: AppColors.primary,
-      isRead: false,
-    ),
-    NotificationItem(
-      id: '3',
-      title: 'Exclusive Offer 🎟️',
-      message: 'Get 20% off catering & sound services when booked this weekend.',
-      time: DateTime.now().subtract(const Duration(days: 1)),
-      icon: Icons.local_offer_rounded,
-      color: AppColors.secondary,
-      isRead: true,
-    ),
-    NotificationItem(
-      id: '4',
-      title: 'Ticket Download Ready',
-      message: 'Your printable receipt and digital gate QR pass are now available.',
-      time: DateTime.now().subtract(const Duration(days: 2)),
-      icon: Icons.qr_code_rounded,
-      color: AppColors.tertiary,
-      isRead: true,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.75,
@@ -118,57 +59,65 @@ class _NotificationsModalState extends State<NotificationsModal> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${_notifications.where((n) => !n.isRead).length} new',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                  if (unreadCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$unreadCount new',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _notifications.clear();
-                  });
-                },
-                child: Text(
-                  'Clear all',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMuted,
+              if (notifications.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    ref.read(notificationsProvider.notifier).clearAll();
+                  },
+                  child: Text(
+                    'Clear all',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Notifications List
           Expanded(
-            child: _notifications.isEmpty
+            child: notifications.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.notifications_off_outlined,
                             size: 48, color: AppColors.textMuted),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
-                          'No new notifications',
+                          'No notifications',
                           style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You are all caught up!',
+                          style: TextStyle(
+                            fontSize: 13,
                             color: AppColors.textMuted,
                           ),
                         ),
@@ -176,72 +125,88 @@ class _NotificationsModalState extends State<NotificationsModal> {
                     ),
                   )
                 : ListView.separated(
-                    itemCount: _notifications.length,
+                    itemCount: notifications.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) {
-                      final item = _notifications[i];
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: item.isRead
-                                ? AppColors.border
-                                : AppColors.primary.withValues(alpha: 0.35),
+                      final item = notifications[i];
+                      return Dismissible(
+                        key: ValueKey(item.id),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (_) {
+                          ref.read(notificationsProvider.notifier).remove(item.id);
+                        },
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          child: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: item.color.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(item.icon, color: item.color, size: 20),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: item.isRead
+                                  ? AppColors.border
+                                  : AppColors.primary.withValues(alpha: 0.35),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        item.title,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: item.color.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(item.icon, color: item.color, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          item.title,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        DateFormat('h:mm a').format(item.time),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textMuted,
+                                        Text(
+                                          DateFormat('h:mm a').format(item.time),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textMuted,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.message,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.textSecondary,
-                                      height: 1.35,
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.message,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textSecondary,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },

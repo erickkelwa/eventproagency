@@ -6,9 +6,12 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
+import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/screens/profile_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/events/screens/home_screen.dart';
+import '../../features/events/screens/events_map_screen.dart';
+import '../../features/events/providers/events_provider.dart';
 import '../../features/events/screens/event_detail_screen.dart';
 import '../../features/events/screens/search_screen.dart';
 import '../../features/events/screens/my_bookings_screen.dart';
@@ -36,7 +39,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         AppRoutes.login,
         AppRoutes.register,
         AppRoutes.forgotPassword,
+        AppRoutes.resetPassword,
         AppRoutes.onboarding,
+        AppRoutes.adminLogin,
       ].contains(state.matchedLocation);
 
       // Not logged in → push to login (except splash & auth routes)
@@ -46,8 +51,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return AppRoutes.login;
       }
 
-      // Already logged in → redirect away from auth screens
-      if (isLoggedIn && isAuthRoute) {
+      // Already logged in → redirect away from standard auth screens (keep adminLogin & reset link accessible)
+      if (isLoggedIn && isAuthRoute && state.matchedLocation != AppRoutes.adminLogin && state.matchedLocation != AppRoutes.resetPassword) {
         return isAdmin ? AppRoutes.adminDashboard : AppRoutes.home;
       }
 
@@ -59,9 +64,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (c, s) => const LoginScreen()),
       GoRoute(path: AppRoutes.register, builder: (c, s) => const RegisterScreen()),
       GoRoute(path: AppRoutes.forgotPassword, builder: (c, s) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (c, s) =>
+            ResetPasswordScreen(oobCode: s.uri.queryParameters['oobCode']),
+      ),
 
       // ── User Routes ──────────────────────────────────────
       GoRoute(path: AppRoutes.home, builder: (c, s) => const HomeScreen()),
+      GoRoute(
+        path: AppRoutes.eventsMap,
+        builder: (c, s) => Consumer(
+          builder: (context, ref, _) {
+            final eventsAsync = ref.watch(eventsProvider);
+            final events = eventsAsync.valueOrNull ?? EventsNotifier.getCuratedEvents();
+            return EventsMapScreen(events: events);
+          },
+        ),
+      ),
       GoRoute(
         path: AppRoutes.eventDetail,
         builder: (c, s) => EventDetailScreen(eventId: s.pathParameters['id']!),
@@ -85,6 +105,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.paymentStatus,
         builder: (c, s) => PaymentStatusScreen(
           transactionId: s.pathParameters['transactionId']!,
+          bookingType: s.uri.queryParameters['bookingType'],
+          itemId: s.uri.queryParameters['itemId'],
+          itemTitle: s.uri.queryParameters['itemTitle'],
+          quantity:
+              int.tryParse(s.uri.queryParameters['quantity'] ?? '') ?? 1,
         ),
       ),
 

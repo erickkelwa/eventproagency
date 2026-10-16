@@ -29,6 +29,9 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 RUN touch database/database.sqlite \
     && chown www-data:www-data database/database.sqlite
 
+ENV DB_CONNECTION=sqlite
+ENV DB_DATABASE=/var/www/html/database/database.sqlite
+
 # Configure Apache to serve from public/
 RUN printf '<VirtualHost *:80>\n    DocumentRoot /var/www/html/public\n    <Directory /var/www/html/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 

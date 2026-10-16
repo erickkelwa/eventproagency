@@ -15,6 +15,10 @@ class BookingModel extends Equatable {
   final DateTime createdAt;
   final int quantity;
 
+  /// Payment reference (EP…) that issued this ticket. Lets the app open the
+  /// server-generated receipt/soft copy and guarantees one ticket per payment.
+  final String? transactionId;
+
   const BookingModel({
     required this.id,
     required this.userId,
@@ -29,6 +33,7 @@ class BookingModel extends Equatable {
     this.imageUrl,
     required this.createdAt,
     this.quantity = 1,
+    this.transactionId,
   });
 
   bool get isUpcoming => eventDate.isAfter(DateTime.now()) && status != 'cancelled';
@@ -36,23 +41,46 @@ class BookingModel extends Equatable {
   bool get isCancelled => status == 'cancelled';
   bool get isConfirmed => status == 'confirmed';
 
+  // ── Tolerant parsing ───────────────────────────────────────
+  // Firestore/SQLite values arrive as int, double or numeric string depending
+  // on who wrote them, and dates as ISO string or Timestamp. Anything stricter
+  // throws a cast error and blanks the whole "My Tickets" list.
+  static double _toDouble(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0;
+
+  static int _toInt(dynamic v, [int fallback = 1]) =>
+      v is int ? v : (v is num ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? fallback);
+
+  static String _toStr(dynamic v, [String fallback = '']) =>
+      v is String ? v : (v?.toString() ?? fallback);
+
+  static DateTime _toDate(dynamic v, DateTime fallback) {
+    if (v is Timestamp) {
+      return v.toDate();
+    }
+    if (v is int) {
+      return DateTime.fromMillisecondsSinceEpoch(v);
+    }
+    return DateTime.tryParse(_toStr(v)) ?? fallback;
+  }
+
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    final now = DateTime.now();
     return BookingModel(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      eventId: json['event_id'] as String,
-      eventTitle: json['event_title'] as String,
-      eventDate: DateTime.parse(json['event_date'] as String),
-      venue: json['venue'] as String,
-      category: json['category'] as String? ?? 'Event',
-      amount: (json['amount'] as num).toDouble(),
-      status: json['status'] as String? ?? 'confirmed',
-      ticketCode: json['ticket_code'] as String? ?? 'EP-XXXXX',
-      imageUrl: json['image_url'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
-      quantity: json['quantity'] as int? ?? 1,
+      id: _toStr(json['id']),
+      userId: _toStr(json['user_id']),
+      eventId: _toStr(json['event_id']),
+      eventTitle: _toStr(json['event_title'], 'Event'),
+      eventDate: _toDate(json['event_date'], now),
+      venue: _toStr(json['venue'], 'Venue TBD'),
+      category: _toStr(json['category'], 'Event'),
+      amount: _toDouble(json['amount']),
+      status: _toStr(json['status'], 'confirmed'),
+      ticketCode: _toStr(json['ticket_code'], 'EP-XXXXX'),
+      imageUrl: json['image_url']?.toString(),
+      createdAt: _toDate(json['created_at'], now),
+      quantity: _toInt(json['quantity']),
+      transactionId: json['transaction_id']?.toString(),
     );
   }
 
@@ -70,9 +98,10 @@ class BookingModel extends Equatable {
         'image_url': imageUrl,
         'created_at': createdAt.toIso8601String(),
         'quantity': quantity,
+        'transaction_id': transactionId,
       };
 
   @override
   List<Object?> get props =>
-      [id, userId, eventId, status, ticketCode, createdAt];
+      [id, userId, eventId, status, ticketCode, createdAt, transactionId];
 }

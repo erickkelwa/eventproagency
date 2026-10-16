@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_colors.dart';
 import '../../features/events/models/event_model.dart';
+import '../../features/events/widgets/instant_order_drawer.dart';
 import 'pro_badges.dart';
 import 'pro_card.dart';
 
@@ -124,7 +125,7 @@ class ProEventCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 9),
 
-                    // Price + availability
+                    // Price + availability + Fasta Quick Order Button
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -135,7 +136,7 @@ class ProEventCard extends StatelessWidget {
                           child: Text(
                             event.formattedPrice,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: -0.3,
@@ -143,9 +144,39 @@ class ProEventCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        ProAvailabilityPill(
-                          availableSlots: event.availableSlots,
-                          capacity: event.capacity,
+                        // Fasta Quick Book / Pass button
+                        InkWell(
+                          onTap: () => InstantOrderDrawer.show(context, event),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bolt_rounded, size: 14, color: Colors.white),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Book',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),

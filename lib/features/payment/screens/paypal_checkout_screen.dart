@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/payment_provider.dart';
+import '../utils/payment_route_args.dart';
 import '../widgets/checkout_shell.dart';
 
 /// PayPal checkout — creates an order, opens the approval URL in a
@@ -13,12 +14,16 @@ class PaypalCheckoutScreen extends ConsumerStatefulWidget {
   final String bookingType; // 'event' | 'service'
   final String itemId;
   final double amount; // in KES
+  final String? itemTitle;
+  final int quantity;
 
   const PaypalCheckoutScreen({
     super.key,
     required this.bookingType,
     required this.itemId,
     required this.amount,
+    this.itemTitle,
+    this.quantity = 1,
   });
 
   @override
@@ -28,6 +33,13 @@ class PaypalCheckoutScreen extends ConsumerStatefulWidget {
 
 class _PaypalCheckoutScreenState extends ConsumerState<PaypalCheckoutScreen> {
   static const _brandGradient = [Color(0xFF009CDE), Color(0xFF003087)];
+
+  String get _displayTitle => (widget.itemTitle != null &&
+          widget.itemTitle!.trim().isNotEmpty)
+      ? widget.itemTitle!.trim()
+      : (widget.bookingType == 'event'
+          ? 'Event Ticket #${widget.itemId}'
+          : 'Service Booking #${widget.itemId}');
 
   /// Indicative KES → USD rate used for the estimate shown to the user.
   /// The backend applies the live rate when creating the order.
@@ -66,11 +78,17 @@ class _PaypalCheckoutScreenState extends ConsumerState<PaypalCheckoutScreen> {
   Future<void> _createOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final user = ref.read(authStateProvider).valueOrNull?.user;
     final result = await ref.read(paymentProvider.notifier).initiatePaypalOrder(
           amount: _estimatedUsd,
           currency: 'USD',
           bookingType: widget.bookingType,
           bookingId: int.tryParse(widget.itemId) ?? 0,
+          email: _emailCtrl.text.trim().isNotEmpty
+              ? _emailCtrl.text.trim()
+              : user?.email,
+          itemTitle: _displayTitle,
+          quantity: widget.quantity,
         );
 
     if (!mounted || result == null) {
@@ -116,9 +134,16 @@ class _PaypalCheckoutScreenState extends ConsumerState<PaypalCheckoutScreen> {
     setState(() => _capturing = false);
 
     if (payment != null) {
-      context.pushReplacement('/payment-status/${payment.transactionId}');
+      context.pushReplacement(paymentStatusLocation(
+        transactionId: payment.transactionId,
+        bookingType: widget.bookingType,
+        itemId: widget.itemId,
+        itemTitle: _displayTitle,
+        quantity: widget.quantity,
+      ));
     } else {
-      _showError('We could not confirm your PayPal payment yet.');
+      _showError(ref.read(paymentProvider).error ??
+          'We could not confirm your PayPal payment yet.');
     }
   }
 
@@ -136,9 +161,7 @@ class _PaypalCheckoutScreenState extends ConsumerState<PaypalCheckoutScreen> {
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
     final isLoading = paymentState.isLoading || _capturing;
-    final itemTitle = widget.bookingType == 'event'
-        ? 'Event Ticket #${widget.itemId}'
-        : 'Service Booking #${widget.itemId}';
+    final itemTitle = _displayTitle;
 
     return Form(
       key: _formKey,

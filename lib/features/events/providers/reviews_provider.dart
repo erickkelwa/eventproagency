@@ -139,7 +139,7 @@ class ReviewsNotifier
         userName: 'Amina W.',
         rating: 5.0,
         comment:
-            'Best event I've been to in Nairobi in years. The production quality rivaled international concerts. Highly recommend!',
+            "Best event I've been to in Nairobi in years. The production quality rivaled international concerts. Highly recommend!",
         createdAt: now.subtract(const Duration(days: 8)),
         likes: ['u1', 'u2', 'u6', 'u7'],
         isVerifiedAttendee: false,

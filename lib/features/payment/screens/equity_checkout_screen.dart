@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/payment_provider.dart';
+import '../utils/payment_route_args.dart';
 import '../widgets/checkout_shell.dart';
 
 /// Equity Bank checkout — supports EazzyPay (phone push) and card payments.
@@ -12,12 +13,16 @@ class EquityCheckoutScreen extends ConsumerStatefulWidget {
   final String bookingType; // 'event' | 'service'
   final String itemId;
   final double amount;
+  final String? itemTitle;
+  final int quantity;
 
   const EquityCheckoutScreen({
     super.key,
     required this.bookingType,
     required this.itemId,
     required this.amount,
+    this.itemTitle,
+    this.quantity = 1,
   });
 
   @override
@@ -27,6 +32,13 @@ class EquityCheckoutScreen extends ConsumerStatefulWidget {
 
 class _EquityCheckoutScreenState extends ConsumerState<EquityCheckoutScreen> {
   static const _brandGradient = [Color(0xFF8B0000), Color(0xFF5C0000)];
+
+  String get _displayTitle => (widget.itemTitle != null &&
+          widget.itemTitle!.trim().isNotEmpty)
+      ? widget.itemTitle!.trim()
+      : (widget.bookingType == 'event'
+          ? 'Event Ticket #${widget.itemId}'
+          : 'Service Booking #${widget.itemId}');
 
   final _formKey = GlobalKey<FormState>();
   final _phoneCtrl = TextEditingController();
@@ -61,20 +73,31 @@ class _EquityCheckoutScreenState extends ConsumerState<EquityCheckoutScreen> {
   Future<void> _initiatePayment() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final user = ref.read(authStateProvider).valueOrNull?.user;
     final payment = await ref.read(paymentProvider.notifier).initiateEquityPayment(
           amount: widget.amount,
           bookingType: widget.bookingType,
           bookingId: int.tryParse(widget.itemId) ?? 0,
           paymentSubtype: _subtype,
           phone: _subtype == 'eazzypay' ? _phoneCtrl.text.trim() : null,
+          email: user?.email,
+          itemTitle: _displayTitle,
+          quantity: widget.quantity,
         );
 
     if (!mounted) return;
 
     if (payment != null) {
-      context.pushReplacement('/payment-status/${payment.transactionId}');
+      context.pushReplacement(paymentStatusLocation(
+        transactionId: payment.transactionId,
+        bookingType: widget.bookingType,
+        itemId: widget.itemId,
+        itemTitle: _displayTitle,
+        quantity: widget.quantity,
+      ));
     } else {
-      _showError(ref.read(paymentProvider).error ?? 'Payment initiation failed');
+      _showError(ref.read(paymentProvider).error ??
+          'We could not process this Equity request. No payment has been taken.');
     }
   }
 
@@ -91,9 +114,7 @@ class _EquityCheckoutScreenState extends ConsumerState<EquityCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
-    final itemTitle = widget.bookingType == 'event'
-        ? 'Event Ticket #${widget.itemId}'
-        : 'Service Booking #${widget.itemId}';
+    final itemTitle = _displayTitle;
 
     return Form(
       key: _formKey,

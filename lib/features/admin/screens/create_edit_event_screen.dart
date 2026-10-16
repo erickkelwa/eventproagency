@@ -9,6 +9,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../events/models/event_model.dart';
 import '../../events/providers/events_provider.dart';
 import '../providers/admin_provider.dart';
@@ -344,15 +346,29 @@ class _CreateEditEventScreenState
         'updated_at': FieldValue.serverTimestamp(),
       };
 
-      if (_isEditing) {
-        await firestore.collection('events').doc(id).update(data);
-      } else {
-        data['created_at'] = FieldValue.serverTimestamp();
-        await firestore.collection('events').doc(id).set(data);
-      }
+      bool saved = false;
 
-      // Also try to sync to Laravel API (non-blocking)
-      _syncToApi(data).ignore();
+      // 1. Sync to Laravel API backend
+      try {
+        await _syncToApi(data);
+        saved = true;
+      } catch (_) {}
+
+      // 2. Sync to Firebase Firestore
+      try {
+        if (_isEditing) {
+          await firestore.collection('events').doc(id).update(data);
+        } else {
+          data['created_at'] = FieldValue.serverTimestamp();
+          await firestore.collection('events').doc(id).set(data);
+        }
+        saved = true;
+      } catch (firestoreError) {
+        if (!saved) {
+          // If neither API nor Firestore succeeded, throw error
+          throw Exception('Failed to save event: $firestoreError');
+        }
+      }
 
       if (mounted) {
         ref.invalidate(eventsProvider);
@@ -376,9 +392,30 @@ class _CreateEditEventScreenState
 
   Future<void> _syncToApi(Map<String, dynamic> data) async {
     try {
-      // Sync to Laravel backend in background — silently ignore errors
-      // DioClient.instance.dio.post('/admin/events', data: data);
-    } catch (_) {}
+      final payload = {
+        'title': data['title'],
+        'description': data['description'],
+        'category': data['category'],
+        'venue': data['venue'],
+        'address': data['address'],
+        'date': data['date'],
+        'price': data['price'],
+        'capacity': data['capacity'],
+        'image_url': data['image_url'],
+        'latitude': data['latitude'],
+        'longitude': data['longitude'],
+        'is_featured': data['is_featured'] == true ? 1 : 0,
+      };
+
+      if (_isEditing) {
+        await DioClient.instance.dio.put('${ApiConstants.adminEvents}/${widget.eventId}', data: payload);
+      } else {
+        await DioClient.instance.dio.post(ApiConstants.adminEvents, data: payload);
+      }
+    } catch (e) {
+      debugPrint('Sync to API error: $e');
+      rethrow;
+    }
   }
 
   void _showSuccess() {

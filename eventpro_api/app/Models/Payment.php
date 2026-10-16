@@ -24,6 +24,8 @@ class Payment extends Model
         'paypal_order_id',      // PayPal order ID (pre-capture)
         'booking_type',
         'booking_id',
+        'item_title',           // what was bought (event / service name)
+        'quantity',             // number of tickets
         'paid_at',
     ];
 
@@ -31,6 +33,7 @@ class Payment extends Model
         'paid_at' => 'datetime',
         'amount'  => 'float',
         'booking_id' => 'integer',
+        'quantity'   => 'integer',
     ];
 
     // ── Helpers ──────────────────────────────────────────────

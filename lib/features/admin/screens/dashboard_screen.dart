@@ -67,6 +67,30 @@ class AdminDashboardScreen extends ConsumerWidget {
                 pinned: true,
                 backgroundColor: AppColors.background.withValues(alpha: 0.8),
                 elevation: 0,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 14.0),
+                  child: Center(
+                    child: IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary, size: 18),
+                      ),
+                      tooltip: 'Back to User App',
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go(AppRoutes.home);
+                        }
+                      },
+                    ),
+                  ),
+                ),
                 flexibleSpace: ClipRect(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -294,12 +318,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                                         getTooltipColor: (_) => AppColors.cardHover,
                                         tooltipRoundedRadius: 8,
                                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                          final item = stats.revenueChart[groupIndex];
+                                          final label = (item['label'] ?? item['day'] ?? '').toString();
                                           return BarTooltipItem(
-                                            '${stats.revenueChart[groupIndex]['label']}\n',
+                                            '$label\n',
                                             TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                                             children: [
                                               TextSpan(
-                                                text: 'KES ${rod.toY.toInt()}',
+                                                text: 'KES ${NumberFormat.compact().format(rod.toY)}',
                                                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                                               ),
                                             ],
@@ -314,11 +340,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                                           showTitles: true,
                                           getTitlesWidget: (value, meta) {
                                             final idx = value.toInt();
-                                            if (idx >= stats.revenueChart.length) return const SizedBox.shrink();
+                                            if (idx < 0 || idx >= stats.revenueChart.length) return const SizedBox.shrink();
+                                            final item = stats.revenueChart[idx];
+                                            final label = (item['label'] ?? item['day'] ?? '').toString();
                                             return Padding(
                                               padding: const EdgeInsets.only(top: 8.0),
                                               child: Text(
-                                                stats.revenueChart[idx]['label'] ?? '',
+                                                label,
                                                 style: TextStyle(
                                                   color: AppColors.textSecondary,
                                                   fontWeight: FontWeight.w600,
@@ -332,7 +360,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                                       leftTitles: AxisTitles(
                                         sideTitles: SideTitles(
                                           showTitles: true,
-                                          reservedSize: 40,
+                                          reservedSize: 42,
                                           getTitlesWidget: (value, meta) {
                                             if (value == 0) return const SizedBox.shrink();
                                             return Text(
@@ -361,17 +389,144 @@ class AdminDashboardScreen extends ConsumerWidget {
                                     ),
                                     borderData: FlBorderData(show: false),
                                     barGroups: stats.revenueChart.asMap().entries.map((e) {
+                                      final rawVal = e.value['amount'] ?? e.value['value'] ?? 0;
+                                      final val = (rawVal is num) ? rawVal.toDouble() : (double.tryParse(rawVal.toString()) ?? 0.0);
                                       return BarChartGroupData(
                                         x: e.key,
                                         barRods: [
                                           BarChartRodData(
-                                            toY: (e.value['value'] as num).toDouble(),
+                                            toY: val,
                                             gradient: AppColors.primaryGradient,
                                             width: 22,
                                             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                                             backDrawRodData: BackgroundBarChartRodData(
                                               show: true,
                                               toY: _getMaxY(stats.revenueChart),
+                                              color: AppColors.backgroundSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // ── Bookings Volume Trend Chart ────────
+                        _ChartCard(
+                          title: 'Ticket Bookings Volume (7 Days)',
+                          child: stats.bookingsChart.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.confirmation_number_outlined, size: 48, color: AppColors.border),
+                                      const SizedBox(height: 12),
+                                      Text('No booking volume data', style: TextStyle(color: AppColors.textMuted)),
+                                    ],
+                                  ),
+                                )
+                              : BarChart(
+                                  BarChartData(
+                                    alignment: BarChartAlignment.spaceAround,
+                                    maxY: _getMaxY(stats.bookingsChart, valueKey: 'count'),
+                                    barTouchData: BarTouchData(
+                                      enabled: true,
+                                      touchTooltipData: BarTouchTooltipData(
+                                        getTooltipColor: (_) => AppColors.cardHover,
+                                        tooltipRoundedRadius: 8,
+                                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                          final item = stats.bookingsChart[groupIndex];
+                                          final label = (item['label'] ?? item['day'] ?? '').toString();
+                                          return BarTooltipItem(
+                                            '$label\n',
+                                            TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                            children: [
+                                              TextSpan(
+                                                text: '${rod.toY.toInt()} Bookings',
+                                                style: const TextStyle(color: Color(0xFF06B6D4), fontWeight: FontWeight.w600),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    titlesData: FlTitlesData(
+                                      show: true,
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            final idx = value.toInt();
+                                            if (idx < 0 || idx >= stats.bookingsChart.length) return const SizedBox.shrink();
+                                            final item = stats.bookingsChart[idx];
+                                            final label = (item['label'] ?? item['day'] ?? '').toString();
+                                            return Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text(
+                                                label,
+                                                style: TextStyle(
+                                                  color: AppColors.textSecondary,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 34,
+                                          getTitlesWidget: (value, meta) {
+                                            if (value == 0) return const SizedBox.shrink();
+                                            return Text(
+                                              value.toInt().toString(),
+                                              style: TextStyle(
+                                                color: AppColors.textMuted,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    ),
+                                    gridData: FlGridData(
+                                      show: true,
+                                      drawVerticalLine: false,
+                                      horizontalInterval: _getMaxY(stats.bookingsChart, valueKey: 'count') / 4 > 0
+                                          ? _getMaxY(stats.bookingsChart, valueKey: 'count') / 4
+                                          : 1,
+                                      getDrawingHorizontalLine: (value) => FlLine(
+                                        color: AppColors.border.withValues(alpha: 0.5),
+                                        strokeWidth: 1,
+                                        dashArray: [5, 5],
+                                      ),
+                                    ),
+                                    borderData: FlBorderData(show: false),
+                                    barGroups: stats.bookingsChart.asMap().entries.map((e) {
+                                      final rawVal = e.value['count'] ?? e.value['amount'] ?? 0;
+                                      final val = (rawVal is num) ? rawVal.toDouble() : (double.tryParse(rawVal.toString()) ?? 0.0);
+                                      return BarChartGroupData(
+                                        x: e.key,
+                                        barRods: [
+                                          BarChartRodData(
+                                            toY: val,
+                                            gradient: const LinearGradient(
+                                              colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)],
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                            ),
+                                            width: 22,
+                                            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                            backDrawRodData: BackgroundBarChartRodData(
+                                              show: true,
+                                              toY: _getMaxY(stats.bookingsChart, valueKey: 'count'),
                                               color: AppColors.backgroundSecondary,
                                             ),
                                           ),
@@ -402,15 +557,31 @@ class AdminDashboardScreen extends ConsumerWidget {
                           const SizedBox(height: 16),
                           Text(e.toString(), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.error)),
                           const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => ref.refresh(dashboardStatsProvider),
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Retry'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () => ref.refresh(dashboardStatsProvider),
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: const Text('Retry'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => context.push(AppRoutes.adminLogin),
+                                icon: const Icon(Icons.login_rounded),
+                                label: const Text('Admin Login'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -425,15 +596,17 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  double _getMaxY(List<dynamic> chartData) {
+  double _getMaxY(List<dynamic> chartData, {String valueKey = 'amount'}) {
     if (chartData.isEmpty) return 100;
     double max = 0;
     for (var d in chartData) {
-      if ((d['value'] as num).toDouble() > max) {
-        max = (d['value'] as num).toDouble();
+      final raw = d[valueKey] ?? d['amount'] ?? d['count'] ?? d['value'] ?? 0;
+      final val = (raw is num) ? raw.toDouble() : (double.tryParse(raw.toString()) ?? 0.0);
+      if (val > max) {
+        max = val;
       }
     }
-    return max == 0 ? 100 : max * 1.2;
+    return max == 0 ? 100 : max * 1.25;
   }
 }
 
@@ -635,7 +808,8 @@ class _QuickActionTileState extends State<_QuickActionTile> {
           1.0,
         ),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          width: 90,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(20),

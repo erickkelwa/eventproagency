@@ -12,19 +12,19 @@ class AppColors {
     _isDark = isDark;
   }
 
-  // ── Primary Palette — Peach/Orange ───────────────────
-  static const Color yellow      = Color(0xFFFFCC80); 
-  static const Color primary     = Color(0xFFF78B5D); // Peach/Orange accent
-  static const Color primaryLight= Color(0xFFFAB193); 
-  static const Color primaryDark = Color(0xFFD66030); 
-  static const Color primaryGlow = Color(0x80F78B5D); 
+  // ── Primary Palette — Fasta High-Energy Coral Orange ──────
+  static const Color yellow      = Color(0xFFFFB300); 
+  static const Color primary     = Color(0xFFFF5722); // Fasta Coral Orange
+  static const Color primaryLight= Color(0xFFFF8A50); 
+  static const Color primaryDark = Color(0xFFE64A19); 
+  static const Color primaryGlow = Color(0x80FF5722); 
 
   // ── Gradient stops ────────────────────────────────
   static const List<Color> gradientColors = [
-    Color(0xFFFFC085), // light orange
-    Color(0xFFF78B5D), // peach
-    Color(0xFFF07441), // deeper peach
-    Color(0xFFD66030), 
+    Color(0xFFFF8A50), // light coral orange
+    Color(0xFFFF5722), // fasta orange
+    Color(0xFFF4511E), // deeper orange
+    Color(0xFFE64A19), 
   ];
   static const List<double> gradientStops = [0.0, 0.30, 0.65, 1.0];
 

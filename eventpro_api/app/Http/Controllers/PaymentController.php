@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\Booking;
+use App\Models\Event;
 use App\Models\ServiceBooking;
+use App\Models\User;
 use App\Services\BrevoMailService;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
@@ -25,6 +27,8 @@ class PaymentController extends Controller
             'booking_id'   => 'required|integer',
             'email'        => 'nullable|email',
             'fcm_token'    => 'nullable|string',
+            'item_title'   => 'nullable|string|max:120',
+            'quantity'     => 'nullable|integer|min:1',
         ]);
 
         $phone = $this->normalizeKenyaPhone($request->phone);
@@ -125,6 +129,8 @@ class PaymentController extends Controller
                 'payment_method'      => 'mpesa',
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
             ]);
 
             return response()->json([
@@ -172,7 +178,7 @@ class PaymentController extends Controller
         if ($checkoutId) {
             $payment = Payment::where('checkout_request_id', $checkoutId)->first();
             if ($payment) {
-                if ($resultCode === 0) {
+                if ($resultCode !== null && (int) $resultCode === 0) {
                     $items   = collect($result['CallbackMetadata']['Item'] ?? []);
                     $receipt = optional($items->firstWhere('Name', 'MpesaReceiptNumber'))['Value']
                         ?? $payment->receipt_number;
@@ -184,9 +190,15 @@ class PaymentController extends Controller
                     ]);
                     $this->markBookingComplete($payment->fresh());
                     $this->notifyPaymentCompleted($payment->fresh());
-                } else {
+                } elseif ($resultCode !== null && (int) $resultCode === 1032) {
+                    // Customer closed the PIN prompt themselves — report it as a
+                    // cancellation, not a failure, so the app wording stays honest.
+                    $payment->update(['status' => 'cancelled']);
+                } elseif ($resultCode !== null) {
                     $payment->update(['status' => 'failed']);
                 }
+                // No ResultCode at all → leave the payment as-is and let the app
+                // keep polling instead of showing a wrong final state.
             }
         }
 
@@ -267,6 +279,8 @@ class PaymentController extends Controller
                 'receipt_number'      => $receiptNumber,
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
                 'paid_at'             => now(),
             ]);
 
@@ -296,6 +310,8 @@ class PaymentController extends Controller
             'booking_id'   => 'required|integer',
             'email'        => 'nullable|email',
             'fcm_token'    => 'nullable|string',
+            'item_title'   => 'nullable|string|max:120',
+            'quantity'     => 'nullable|integer|min:1',
         ]);
 
         $phone = $this->normalizeKenyaPhone($request->phone);
@@ -343,6 +359,8 @@ class PaymentController extends Controller
                 'receipt_number'      => $receiptNumber,
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
                 'paid_at'             => now(),
             ]);
 
@@ -373,6 +391,9 @@ class PaymentController extends Controller
             'currency'     => 'required|string|size:3',
             'booking_type' => 'required|in:event,service',
             'booking_id'   => 'required|integer',
+            'email'        => 'nullable|email',
+            'item_title'   => 'nullable|string|max:120',
+            'quantity'     => 'nullable|integer|min:1',
         ]);
 
         try {
@@ -414,11 +435,14 @@ class PaymentController extends Controller
                 'amount'              => $request->amount,
                 'currency'            => strtoupper($request->currency),
                 'phone'               => $request->phone ?? 'N/A',
+                'email'               => $request->email,
                 'status'              => 'pending',
                 'payment_method'      => 'paypal',
                 'paypal_order_id'     => $orderId,
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
             ]);
 
             return response()->json([
@@ -456,6 +480,7 @@ class PaymentController extends Controller
             ]);
 
             $this->markBookingComplete($payment);
+            $this->notifyPaymentCompleted($payment->fresh());
 
             return response()->json(['message' => 'Payment captured', 'payment' => $payment->fresh()]);
         } catch (\Exception $e) {
@@ -477,6 +502,9 @@ class PaymentController extends Controller
             // Card mode: card_number, expiry_month, expiry_year, cvv, card_holder
             'payment_subtype' => 'required|in:eazzypay,card',
             'phone'         => 'required_if:payment_subtype,eazzypay',
+            'email'         => 'nullable|email',
+            'item_title'    => 'nullable|string|max:120',
+            'quantity'      => 'nullable|integer|min:1',
         ]);
 
         try {
@@ -509,17 +537,21 @@ class PaymentController extends Controller
                 'amount'              => $request->amount,
                 'currency'            => 'KES',
                 'phone'               => $request->phone ?? 'N/A',
+                'email'               => $request->email,
                 'status'              => 'completed',
                 'payment_method'      => 'equity',
                 'receipt_number'      => $receiptNumber,
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
                 'paid_at'             => now(),
             ]);
 
             sleep(1);
 
             $this->markBookingComplete($payment);
+            $this->notifyPaymentCompleted($payment);
 
             return response()->json([
                 'message' => 'Equity charge processed (MOCK)',
@@ -549,8 +581,14 @@ class PaymentController extends Controller
                 $this->refreshFromDaraja($payment, $cfg);
             }
 
-            // In sandbox/demo mode, complete the pending payment so the presentation flow completes seamlessly
-            if ($payment->status === 'pending' && ($cfg['env'] ?? 'sandbox') === 'sandbox') {
+            // NOTE: a pending payment is only ever completed by Safaricom —
+            // through the async callback or the stkpushquery above. It used to be
+            // auto-completed whenever DARAJA_ENV=sandbox, which made the app shout
+            // "Payment Successful" while the PIN prompt was still open.
+            // Set DARAJA_DEMO_AUTOCONFIRM=true explicitly if you need a scripted
+            // demo that skips the PIN (never enable it for real payments).
+            if ($payment->status === 'pending'
+                && filter_var(env('DARAJA_DEMO_AUTOCONFIRM', false), FILTER_VALIDATE_BOOLEAN)) {
                 $receipt = 'QHX' . strtoupper(Str::random(7));
                 $payment->update([
                     'status'               => 'completed',
@@ -572,12 +610,23 @@ class PaymentController extends Controller
      */
     public function receipt($transactionId)
     {
+        $transactionId = trim((string) $transactionId);
+
+        // Only ever look a payment up by a real payment identifier. This used to
+        // fall back to booking_id, which is a small integer (often 0 because event
+        // ids are Firestore strings) — so one person's receipt link resolved to
+        // somebody else's payment and displayed their email, amount and receipt no.
+        $refIsRealId = $transactionId !== ''
+            && $transactionId !== '0'
+            && preg_match('/^EP[0-9A-Z]{6,}$/i', $transactionId);
+
+        if (!$refIsRealId) {
+            abort(404, 'Receipt reference is missing or malformed.');
+        }
+
         $payment = Payment::where('transaction_id', $transactionId)
             ->orWhere('receipt_number', $transactionId)
             ->orWhere('mpesa_receipt_number', $transactionId)
-            ->orWhere(function ($q) use ($transactionId) {
-                $q->where('booking_id', $transactionId);
-            })
             ->latest('id')
             ->firstOrFail();
 
@@ -589,7 +638,8 @@ class PaymentController extends Controller
         $date       = ($payment->paid_at ?? $payment->created_at)?->format('d M Y, H:i') ?? '';
         $email      = $payment->email ?: '';
         $refType    = $payment->booking_type === 'service' ? 'Service Booking' : 'Event Booking';
-        $bookingRef = '#' . $payment->booking_id;
+        $itemName   = $payment->item_title ?: ($payment->booking_type === 'service' ? 'Service booking' : 'Event ticket');
+        $quantity   = max(1, (int) ($payment->quantity ?? 1));
         $statusStyle = ($payment->status === 'completed')
             ? 'background:rgba(0,166,81,.15);color:#3ddc84;'
             : 'background:rgba(255,193,7,.15);color:#ffca28;';
@@ -631,7 +681,8 @@ class PaymentController extends Controller
       <tr><td class="k">Payment Method</td><td class="v">{$esc($gateway)}</td></tr>
       <tr><td class="k">{$esc($method)}</td><td class="v">{$esc($receipt)}</td></tr>
       <tr><td class="k">Date</td><td class="v">{$esc($date)}</td></tr>
-      <tr><td class="k">{$esc($refType)}</td><td class="v">{$esc($bookingRef)}</td></tr>
+      <tr><td class="k">Item</td><td class="v">{$esc($itemName)}&nbsp;&times;{$esc($quantity)}</td></tr>
+      <tr><td class="k">{$esc($refType)}</td><td class="v">{$esc($payment->transaction_id)}</td></tr>
 HTML;
         if ($email !== '') {
             $html .= "      <tr><td class=\"k\">Paid By</td><td class=\"v\">{$esc($email)}</td></tr>\n";
@@ -664,7 +715,13 @@ HTML;
             ]);
 
             $data       = $res->json();
-            $resultCode = $data['ResultCode'] ?? null;
+            // Daraja returns ResultCode as a number on some endpoints and as a
+            // numeric string on others. Comparing strictly against ints without
+            // casting made an OPEN PIN prompt ("1") fall through to the catch-all
+            // branch and mark the payment FAILED before the customer typed a PIN.
+            $rawCode    = $data['ResultCode'] ?? null;
+            $resultCode = is_numeric($rawCode) ? (int) $rawCode : null;
+            $resultDesc = strtolower((string) ($data['ResultDesc'] ?? ''));
 
             if ($resultCode === 0) {
                 $items   = collect($data['CallbackMetadata']['Item'] ?? []);
@@ -683,8 +740,7 @@ HTML;
                 // processed at initiator" — the STK prompt is still OPEN on the
                 // customer's phone waiting for the PIN. Do NOT mark it failed or
                 // cancelled here; only trust an explicit cancel in the description.
-                $desc = strtolower($data['ResultDesc'] ?? '');
-                if (str_contains($desc, 'cancel')) {
+                if (str_contains($resultDesc, 'cancel')) {
                     $payment->update(['status' => 'cancelled']);
                 }
                 // Otherwise leave status pending until the PIN is entered,
@@ -696,9 +752,17 @@ HTML;
                 // 1037 = Timeout / user took too long to enter PIN
                 // 2001 = Invalid PIN or wrong initiator
                 $payment->update(['status' => 'failed']);
-            } elseif ($resultCode !== null && $resultCode !== '0' && $resultCode !== 0) {
-                // Any other definitive error code from Daraja (e.g. 1001, 1019, 1025)
-                $payment->update(['status' => 'failed']);
+            } elseif ($resultCode !== null && $resultCode !== 0) {
+                // Any other definitive error code from Daraja (e.g. 1001, 1019, 1025).
+                // Still guard against "in progress" wordings so an open PIN prompt
+                // can never be flipped to failed.
+                if (str_contains($resultDesc, 'process')
+                    || str_contains($resultDesc, 'pending')
+                    || str_contains($resultDesc, 'initiator')) {
+                    // leave pending
+                } else {
+                    $payment->update(['status' => 'failed']);
+                }
             }
             // If ResultCode is null (or query returned 'The transaction is being processed'), leave pending
         } catch (\Exception $e) {
@@ -745,6 +809,8 @@ HTML;
                 'payment_method'      => 'paystack',
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
                 'paid_at'             => now(),
             ]);
             $this->markBookingComplete($payment);
@@ -797,6 +863,8 @@ HTML;
                 'payment_method'      => 'paystack',
                 'booking_type'        => $request->booking_type,
                 'booking_id'          => $request->booking_id,
+                'item_title'          => Str::limit(trim((string) $request->item_title), 120, '') ?: null,
+                'quantity'            => max(1, (int) ($request->quantity ?? 1)),
             ]);
 
             return response()->json([
@@ -886,30 +954,74 @@ HTML;
             $booking = Booking::find($payment->booking_id);
             if ($booking) {
                 $booking->update(['status' => 'completed', 'qr_code' => (string) \Illuminate\Support\Str::uuid()]);
-            } else {
-                $user = User::where('email', $payment->email)
-                    ->orWhere('phone', 'like', '%' . substr($payment->phone ?? '', -8))
-                    ->first();
-                $firstEvent = Event::first();
-                $eventId = ($payment->booking_id > 0 && Event::find($payment->booking_id))
-                    ? $payment->booking_id
-                    : ($firstEvent?->id ?? 1);
-
-                Booking::create([
-                    'event_id' => $eventId,
-                    'user_id' => $user?->id ?? 1,
-                    'quantity' => 1,
-                    'amount' => $payment->amount,
-                    'status' => 'completed',
-                    'qr_code' => (string) \Illuminate\Support\Str::uuid(),
-                ]);
+                return;
             }
+
+            // The app pays for a Firestore event, so booking_id usually carries an
+            // EVENT id (or 0 when that id is a non-numeric document id). Resolve the
+            // paying customer strictly by the email/phone captured at checkout — and
+            // never fall back to user 1. That fallback used to credit every unknown
+            // purchaser's ticket to whoever happened to own id 1, so the buyer saw
+            // someone else's bookings (and that person saw tickets he never bought).
+            $user  = $this->resolvePayingUser($payment->email, $payment->phone);
+            $event = $payment->booking_id ? Event::find($payment->booking_id) : null;
+
+            if (!$user || !$event) {
+                \Illuminate\Support\Facades\Log::info(
+                    'Payment completed but no matching SQL booking/event/user; '
+                    . 'ticket is issued to the buyer in the app, no booking attributed.',
+                    [
+                        'payment_id'    => $payment->id,
+                        'email'         => $payment->email,
+                        'has_user'      => (bool) $user,
+                        'has_event_row' => (bool) $event,
+                    ]
+                );
+                return;
+            }
+
+            Booking::create([
+                'event_id' => $event->id,
+                'user_id'  => $user->id,
+                'quantity' => 1,
+                'amount'   => $payment->amount,
+                'status'   => 'completed',
+                'qr_code'  => (string) \Illuminate\Support\Str::uuid(),
+            ]);
         } elseif ($payment->booking_type === 'service') {
             $booking = ServiceBooking::find($payment->booking_id);
             if ($booking) {
                 $booking->update(['status' => 'paid']);
             }
         }
+    }
+
+    /**
+     * Identify the customer who actually paid, using ONLY exact identifiers.
+     * Returns null when nobody matches — callers must then refuse to attribute
+     * the booking/receipt to any user rather than guessing.
+     */
+    private function resolvePayingUser(?string $email, ?string $phone): ?User
+    {
+        $email = strtolower(trim((string) $email));
+        if ($email !== '') {
+            $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+            if ($user) return $user;
+        }
+
+        $normalized = $this->normalizeKenyaPhone((string) $phone);
+        if (strlen($normalized) >= 11 && $normalized !== '254') {
+            // Match the stored format exactly (full international or local 07xx),
+            // never a loose LIKE '%' suffix scan that could hit an unrelated account.
+            $local = '0' . substr($normalized, 3);
+            $user  = User::where('phone', $normalized)
+                ->orWhere('phone', $local)
+                ->orWhere('phone', '+' . $normalized)
+                ->first();
+            if ($user) return $user;
+        }
+
+        return null;
     }
 
     /**
@@ -936,62 +1048,100 @@ HTML;
             }
         }
 
-        // ── Receipt email via MailService ──
-        $email = $payment->email;
-        $name = '';
-        $eventName = null;
-
-        // Try to enrich customer and event/service details from the booking record
-        if ($payment->booking_type === 'event') {
-            $booking = Booking::with(['user', 'event'])->find($payment->booking_id);
-            if ($booking) {
-                if (!$email && $booking->user) {
-                    $email = $booking->user->email;
-                }
-                if ($booking->user) {
-                    $name = $booking->user->name;
-                }
-                if ($booking->event) {
-                    $eventName = $booking->event->title;
-                }
-            }
-        } elseif ($payment->booking_type === 'service') {
-            $booking = ServiceBooking::with(['user', 'service'])->find($payment->booking_id);
-            if ($booking) {
-                if (!$email && $booking->user) {
-                    $email = $booking->user->email;
-                }
-                if ($booking->user) {
-                    $name = $booking->user->name;
-                }
-                if ($booking->service) {
-                    $eventName = $booking->service->title;
-                }
-            }
-        }
-
-        if (!$email && $payment->phone) {
-            $user = \App\Models\User::where('phone', 'like', '%' . substr($payment->phone, -8))->first();
-            if ($user && $user->email) {
-                $email = $user->email;
-                if (!$name) $name = $user->name;
-            }
-        }
-
-        if (!$email) {
+        // ── Confirmation email ──────────────────────────────────
+        // We only ever mail the address the BUYER typed at checkout. The old
+        // "match any user whose phone ends with these digits" guesswork is what
+        // sent other people's tickets to whichever account owned the phone prefix
+        // (and credited bookings to user id 1). No guess, no email.
+        $email = trim((string) $payment->email);
+        if ($email === '') {
             \Illuminate\Support\Facades\Log::info(
-                'Payment completed but no email found; skipped receipt email.',
+                'Payment completed but no buyer email captured; skipped confirmation email.',
                 ['payment_id' => $payment->id]
             );
             return;
         }
 
-        try {
-            app(BrevoMailService::class)
-                ->sendReceipt($email, $name, $payment->amount, $payment->transaction_id, $eventName);
-            \Illuminate\Support\Facades\Log::info("Receipt email sent successfully for payment #{$payment->transaction_id} to {$email}");
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Receipt email failed: ' . $e->getMessage());
+        $buyer    = $this->resolvePayingUser($email, $payment->phone);
+        $name     = $buyer?->name ?? '';
+        $itemName = $payment->item_title;
+
+        // Fall back to the booking relations when the app did not send a title.
+        if (!$itemName) {
+            if ($payment->booking_type === 'event') {
+                $booking = Booking::with('event')->find($payment->booking_id);
+                $itemName = $booking?->event?->title;
+            } else {
+                $booking = ServiceBooking::with('service')->find($payment->booking_id);
+                $itemName = $itemName ?? ($booking?->service?->name ?? $booking?->service?->title);
+            }
         }
+
+        $quantity = max(1, (int) ($payment->quantity ?? 1));
+
+        // Never double-send: a payment can reach 'completed' from the async
+        // callback AND from a stkpushquery poll in the same minute.
+        $dedupeKey = 'ticket_mail_' . $payment->id;
+        try {
+            if (app('cache')->store('file')->has($dedupeKey)) {
+                return;
+            }
+            app('cache')->store('file')->put($dedupeKey, 1, now()->addDay());
+        } catch (\Throwable $e) {
+            // Cache unavailable — send anyway; one email is better than none.
+        }
+
+        try {
+            $softCopyUrl = $this->receiptUrl($payment->transaction_id);
+
+            if ($payment->booking_type === 'event') {
+                // 🎉 Congratulations — ticket purchased, with a downloadable pass.
+                app(BrevoMailService::class)->sendBookingConfirmation(
+                    $email,
+                    $name,
+                    $itemName,
+                    $payment->amount,
+                    $payment->transaction_id,
+                    $quantity,
+                    $softCopyUrl
+                );
+                \Illuminate\Support\Facades\Log::info(
+                    "Booking confirmation email sent for payment #{$payment->transaction_id} to {$email}"
+                );
+            } else {
+                app(BrevoMailService::class)->sendReceipt(
+                    $email,
+                    $name,
+                    $payment->amount,
+                    $payment->transaction_id,
+                    $itemName,
+                    $softCopyUrl
+                );
+                \Illuminate\Support\Facades\Log::info(
+                    "Receipt email sent for payment #{$payment->transaction_id} to {$email}"
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Confirmation email failed: ' . $e->getMessage());
+        }
+    }
+
+    /** Public, printable receipt / ticket soft-copy link. */
+    private function receiptUrl(string $transactionId): string
+    {
+        $base = rtrim((string) (config('app.url') ?: env('APP_URL', '')), '/');
+        if ($base === '') {
+            $base = rtrim(url('/'), '/');
+        }
+        // Render/Heroku sometimes expose APP_URL as a bare host ("myapp.onrender.com").
+        // An email link without a scheme is dead, so normalise it here.
+        if (!preg_match('#^https?://#i', $base)) {
+            $base = 'https://' . preg_replace('#^/+#', '', $base);
+        }
+        if (!str_ends_with($base, '/api')) {
+            $base .= '/api';
+        }
+
+        return $base . '/payments/receipt/' . urlencode($transactionId);
     }
 }

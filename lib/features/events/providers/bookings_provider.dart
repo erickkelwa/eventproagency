@@ -35,19 +35,10 @@ class BookingsNotifier extends AsyncNotifier<List<BookingModel>> {
     // NOTE: Filtering on `user_id` and sorting on `created_at` together would
     // require a composite index in Firestore. To avoid that, we only filter
     // server-side and sort the (small) result list client-side.
-    var snapshot = await firestore
+    final snapshot = await firestore
         .collection('bookings')
         .where('user_id', isEqualTo: userId)
         .get();
-
-    // Seed dummy bookings if empty (for demo)
-    if (snapshot.docs.isEmpty) {
-      await _seedDummyBookings(userId);
-      snapshot = await firestore
-          .collection('bookings')
-          .where('user_id', isEqualTo: userId)
-          .get();
-    }
 
     final bookings = snapshot.docs.map((doc) {
       final data = doc.data();
@@ -55,96 +46,86 @@ class BookingsNotifier extends AsyncNotifier<List<BookingModel>> {
       return BookingModel.fromJson(data);
     }).toList();
 
+    // Defence in depth: a shared device can hand back a doc whose user_id got
+    // written by an older build. Never render tickets that are not this user's.
+    bookings.removeWhere((b) => b.userId != userId);
+
     bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return bookings;
   }
 
-  Future<void> _seedDummyBookings(String userId) async {
+  /// Issue the paid ticket into the SIGNED-IN user's own bookings.
+  ///
+  /// Called once a payment reaches `completed`. The document id is derived from
+  /// the Firebase uid + payment reference, so re-polling the same payment can
+  /// never create a second ticket, and the ticket can only ever be read back by
+  /// the same account (see the `user_id` filter in [_fetchBookings]).
+  /// Returns the ticket code, or null when there is nothing to issue.
+  Future<String?> issueTicket({
+    required String bookingType,
+    required String itemId,
+    required String transactionId,
+    required double amount,
+    int quantity = 1,
+    String? itemTitle,
+    String? eventDate,
+    String? venue,
+    String? category,
+    String? imageUrl,
+  }) async {
+    final userId = ref.read(authStateProvider).valueOrNull?.user?.id;
+    if (userId == null || userId.isEmpty) return null;
+    if (transactionId.isEmpty) return null;
+
     final firestore = FirebaseFirestore.instance;
-    final batch = firestore.batch();
+    final docId = '${userId}_$transactionId';
+    final docRef = firestore.collection('bookings').doc(docId);
 
-    final dummies = [
-      {
-        'user_id': userId,
-        'event_id': 'event_001',
-        'event_title': 'Neon Nights Music Festival',
-        'event_date': DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-        'venue': 'Nairobi Expo Centre',
-        'category': 'Music',
-        'amount': 2500.0,
-        'status': 'confirmed',
-        'ticket_code': 'EP-MF-${userId.substring(0, 6).toUpperCase()}',
-        'image_url':
-            'https://images.unsplash.com/photo-1540039155732-6762b5134fb3?q=80&w=800&auto=format&fit=crop',
-        'created_at': DateTime.now()
-            .subtract(const Duration(days: 2))
-            .toIso8601String(),
-        'quantity': 1,
-      },
-      {
-        'user_id': userId,
-        'event_id': 'event_002',
-        'event_title': 'Tech Disrupt Summit 2026',
-        'event_date':
-            DateTime.now().add(const Duration(days: 14)).toIso8601String(),
-        'venue': 'KICC, Nairobi',
-        'category': 'Conference',
-        'amount': 5000.0,
-        'status': 'confirmed',
-        'ticket_code': 'EP-TC-${userId.substring(0, 6).toUpperCase()}',
-        'image_url':
-            'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=800&auto=format&fit=crop',
-        'created_at': DateTime.now()
-            .subtract(const Duration(days: 5))
-            .toIso8601String(),
-        'quantity': 2,
-      },
-      {
-        'user_id': userId,
-        'event_id': 'event_003',
-        'event_title': 'Gourmet Food Tasting & Wine',
-        'event_date': DateTime.now()
-            .subtract(const Duration(days: 30))
-            .toIso8601String(),
-        'venue': 'Windsor Golf Hotel',
-        'category': 'Food',
-        'amount': 8000.0,
-        'status': 'attended',
-        'ticket_code': 'EP-FW-${userId.substring(0, 6).toUpperCase()}',
-        'image_url':
-            'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=800&auto=format&fit=crop',
-        'created_at': DateTime.now()
-            .subtract(const Duration(days: 35))
-            .toIso8601String(),
-        'quantity': 1,
-      },
-      {
-        'user_id': userId,
-        'event_id': 'event_004',
-        'event_title': 'Laugh Out Loud Comedy Show',
-        'event_date': DateTime.now()
-            .subtract(const Duration(days: 10))
-            .toIso8601String(),
-        'venue': 'National Theatre',
-        'category': 'Comedy',
-        'amount': 1500.0,
-        'status': 'cancelled',
-        'ticket_code': 'EP-CS-${userId.substring(0, 6).toUpperCase()}',
-        'image_url':
-            'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=800&auto=format&fit=crop',
-        'created_at': DateTime.now()
-            .subtract(const Duration(days: 15))
-            .toIso8601String(),
-        'quantity': 1,
-      },
-    ];
-
-    for (final booking in dummies) {
-      final docRef = firestore.collection('bookings').doc();
-      batch.set(docRef, booking);
+    // Already issued (this screen can be rebuilt several times while polling).
+    final existing = await docRef.get();
+    if (existing.exists) {
+      await refresh();
+      return BookingModel.fromJson({
+        ...existing.data()!,
+        'id': docRef.id,
+      }).ticketCode;
     }
 
-    await batch.commit();
+    final now = DateTime.now();
+    final isEvent = bookingType == 'event';
+    final title = (itemTitle != null && itemTitle.trim().isNotEmpty)
+        ? itemTitle.trim()
+        : (isEvent ? 'Event Ticket #$itemId' : 'Service Booking #$itemId');
+    final ticketCode =
+        'EP-${(isEvent ? 'TKT' : 'SRV')}-${transactionId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')}';
+
+    final data = <String, dynamic>{
+      'user_id': userId,
+      'event_id': itemId,
+      'event_title': title,
+      'event_date': eventDate ?? now.toIso8601String(),
+      'venue': venue ?? 'To be announced',
+      'category': category ?? (isEvent ? 'Event' : 'Service'),
+      'amount': amount,
+      'status': 'confirmed',
+      'ticket_code': ticketCode,
+      'image_url': imageUrl,
+      'created_at': now.toIso8601String(),
+      'quantity': quantity < 1 ? 1 : quantity,
+      'transaction_id': transactionId,
+      'booking_type': bookingType,
+    };
+
+    await docRef.set(data);
+
+    // Keep the in-memory list in sync so "My Tickets" shows it immediately.
+    final current = state.valueOrNull ?? <BookingModel>[];
+    final ticket = BookingModel.fromJson({...data, 'id': docId});
+    final merged = [...current.where((b) => b.id != docId), ticket]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    state = AsyncData(merged);
+
+    return ticketCode;
   }
 
   Future<void> refresh() async {

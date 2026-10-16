@@ -10,6 +10,10 @@ class UserModel extends Equatable {
   final String? fcmToken;
   final DateTime? emailVerifiedAt;
   final DateTime createdAt;
+  final bool hasIssues;
+  final int issuesCount;
+  final int bookingCount;
+  final List<Map<String, dynamic>>? issues;
 
   const UserModel({
     required this.id,
@@ -21,16 +25,23 @@ class UserModel extends Equatable {
     this.fcmToken,
     this.emailVerifiedAt,
     required this.createdAt,
+    this.hasIssues = false,
+    this.issuesCount = 0,
+    this.bookingCount = 0,
+    this.issues,
   });
 
-  bool get isAdmin => role == 'admin';
+  static const String _masterAdminEmail = 'erickkelwa9@gmail.com';
+
+  bool get isAdmin => role == 'admin' || email.toLowerCase() == _masterAdminEmail;
   bool get isUser => role == 'user';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final issuesList = json['issues'] as List?;
     return UserModel(
       id: json['id'].toString(),
-      name: json['name'] as String,
-      email: json['email'] as String,
+      name: json['name'] as String? ?? 'User',
+      email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? 'user',
       phone: json['phone'] as String?,
       avatar: json['avatar'] as String?,
@@ -39,6 +50,10 @@ class UserModel extends Equatable {
           ? DateTime.tryParse(json['email_verified_at'])
           : null,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
+      hasIssues: json['has_issues'] as bool? ?? (issuesList != null && issuesList.isNotEmpty),
+      issuesCount: issuesList?.length ?? (json['has_issues'] == true ? 1 : 0),
+      bookingCount: json['bookings_count'] as int? ?? 0,
+      issues: issuesList?.map((i) => Map<String, dynamic>.from(i)).toList(),
     );
   }
 
@@ -62,6 +77,10 @@ class UserModel extends Equatable {
     String? phone,
     String? avatar,
     String? fcmToken,
+    int? bookingCount,
+    bool? hasIssues,
+    int? issuesCount,
+    List<Map<String, dynamic>>? issues,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -73,6 +92,10 @@ class UserModel extends Equatable {
       fcmToken: fcmToken ?? this.fcmToken,
       emailVerifiedAt: emailVerifiedAt,
       createdAt: createdAt,
+      bookingCount: bookingCount ?? this.bookingCount,
+      hasIssues: hasIssues ?? this.hasIssues,
+      issuesCount: issuesCount ?? this.issuesCount,
+      issues: issues ?? this.issues,
     );
   }
 

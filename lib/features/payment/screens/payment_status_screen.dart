@@ -5,6 +5,7 @@ import 'dart:async';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gradient_elevated_button.dart';
 import '../../../core/constants/app_routes.dart';
+import '../../events/providers/bookings_provider.dart';
 import '../providers/payment_provider.dart';
 import '../models/payment_model.dart';
 import '../../../core/constants/api_constants.dart';
@@ -13,7 +14,22 @@ import 'package:url_launcher/url_launcher.dart';
 class PaymentStatusScreen extends ConsumerStatefulWidget {
   final String transactionId;
 
-  const PaymentStatusScreen({super.key, required this.transactionId});
+  /// Item context carried from checkout. Needed to issue the ticket to the
+  /// account that actually paid (events use Firestore string ids, so the
+  /// numeric `booking_id` returned by the API is not enough).
+  final String? bookingType;
+  final String? itemId;
+  final String? itemTitle;
+  final int quantity;
+
+  const PaymentStatusScreen({
+    super.key,
+    required this.transactionId,
+    this.bookingType,
+    this.itemId,
+    this.itemTitle,
+    this.quantity = 1,
+  });
 
   @override
   ConsumerState<PaymentStatusScreen> createState() =>
@@ -23,10 +39,12 @@ class PaymentStatusScreen extends ConsumerStatefulWidget {
 class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   Timer? _pollingTimer;
   int _pollCount = 0;
-  static const int _maxPolls = 12; // 12 * 5s = 60s timeout
+  static const int _maxPolls = 36; // 36 * 5s = 180s — matches the ~2-min lifetime of Safaricom's STK PIN prompt
   bool _isTimedOut = false;
-  int _secondsLeft = 60;
+  int _secondsLeft = 180;
   Timer? _countdownTimer;
+  bool _ticketIssued = false;
+  String? _ticketCode;
 
   @override
   void initState() {
@@ -46,7 +64,7 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   void _startPolling() {
     _isTimedOut = false;
     _pollCount = 0;
-    _secondsLeft = 60;
+    _secondsLeft = 180;
     _pollingTimer?.cancel();
     _countdownTimer?.cancel();
 
@@ -113,10 +131,17 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   }
 
   void _downloadReceipt() async {
-    final uri = Uri.parse(
-        ApiConstants.downloadReceipt.replaceAll('{id}', widget.transactionId));
+    final rawPath =
+        ApiConstants.downloadReceipt.replaceAll('{id}', widget.transactionId);
+    final fullUrl =
+        rawPath.startsWith('http') ? rawPath : '${ApiConstants.baseUrl}$rawPath';
+    final uri = Uri.parse(fullUrl);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched =
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(uri);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,6 +152,50 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
         );
       }
     }
+  }
+
+  /// Attach the paid ticket to the SIGNED-IN account, exactly once.
+  /// This is what fixes "I bought a ticket but someone else's data appeared":
+  /// the ticket is written under the current Firebase uid, never inferred from
+  /// a phone number or a shared admin id.
+  Future<void> _issueTicketOnce(PaymentModel payment) async {
+    if (_ticketIssued) return;
+    _ticketIssued = true;
+
+    final bookingType = widget.bookingType ?? payment.bookingType;
+    final itemId = widget.itemId ?? '';
+
+    try {
+      final code = await ref.read(bookingsProvider.notifier).issueTicket(
+            bookingType: bookingType,
+            itemId: itemId.isEmpty ? '${payment.bookingId}' : itemId,
+            transactionId: widget.transactionId,
+            amount: payment.amount,
+            quantity: widget.quantity,
+            itemTitle: widget.itemTitle,
+          );
+      if (mounted && code != null) {
+        setState(() => _ticketCode = code);
+      }
+    } catch (e) {
+      // Ticket issuance failed (offline / rules). Keep the success screen but
+      // tell the truth — the payment itself is already confirmed server-side.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Payment confirmed, but the ticket could not be added to My Tickets: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _goToMyTickets() {
+    ref.read(bookingsProvider.notifier).refresh();
+    context.go(AppRoutes.myBookings);
   }
 
   @override
@@ -203,10 +272,20 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
               },
             );
           } else if (payment.isCompleted) {
+            if (!_ticketIssued) {
+              WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _issueTicketOnce(payment));
+            }
+            final title = (widget.itemTitle != null &&
+                    widget.itemTitle!.isNotEmpty)
+                ? widget.itemTitle!
+                : null;
             return _SuccessView(
               payment: payment,
+              itemTitle: title,
+              ticketCode: _ticketCode,
               onDownload: _downloadReceipt,
-              onHome: () => context.go(AppRoutes.home),
+              onHome: _goToMyTickets,
             );
           } else {
             return _StatusView(
@@ -359,6 +438,8 @@ class _StatusView extends StatelessWidget {
 
 class _SuccessView extends StatelessWidget {
   final PaymentModel payment;
+  final String? itemTitle;
+  final String? ticketCode;
   final VoidCallback onDownload;
   final VoidCallback onHome;
 
@@ -366,6 +447,8 @@ class _SuccessView extends StatelessWidget {
     required this.payment,
     required this.onDownload,
     required this.onHome,
+    this.itemTitle,
+    this.ticketCode,
   });
 
   @override
@@ -393,6 +476,18 @@ class _SuccessView extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            itemTitle == null
+                ? 'Congratulations — your booking is confirmed.'
+                : 'Congratulations! Your ticket for\n$itemTitle is confirmed. 🎉',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(20),
@@ -403,11 +498,15 @@ class _SuccessView extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _DetailRow(label: 'Amount Paid', value: 'KES ${payment.amount.toStringAsFixed(0)}'),
+                _DetailRow(label: 'Amount Paid', value: '${payment.currency} ${payment.amount.toStringAsFixed(0)}'),
                 Divider(color: AppColors.border, height: 24),
-                _DetailRow(label: 'M-Pesa Receipt', value: payment.mpesaReceiptNumber ?? 'N/A'),
+                _DetailRow(label: payment.receiptLabel, value: payment.displayReceipt),
                 Divider(color: AppColors.border, height: 24),
-                _DetailRow(label: 'Booking ID', value: '#${payment.bookingId}'),
+                _DetailRow(label: 'Booking Ref', value: '#${payment.transactionId}'),
+                if (ticketCode != null) ...[
+                  Divider(color: AppColors.border, height: 24),
+                  _DetailRow(label: 'Ticket Code', value: ticketCode!),
+                ],
               ],
             ),
           ),
@@ -422,7 +521,8 @@ class _SuccessView extends StatelessWidget {
           TextButton.icon(
             onPressed: onDownload,
             icon: const Icon(Icons.receipt_long_rounded, color: AppColors.primary),
-            label: const Text('Download Receipt', style: TextStyle(color: AppColors.primary)),
+            label: const Text('Download Ticket / Receipt (Soft Copy)',
+                style: TextStyle(color: AppColors.primary, fontSize: 12.5)),
           ),
         ],
       ),

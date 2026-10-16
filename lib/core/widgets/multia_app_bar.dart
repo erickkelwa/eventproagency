@@ -42,32 +42,37 @@ class MultiaAppBar extends StatelessWidget {
             left,
             Expanded(
               child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    ShaderMask(
-                      shaderCallback: (b) =>
-                          AppColors.primaryGradient.createShader(b),
-                      child: const Text(
-                        '.',
+                child: Image.asset(
+                  'assets/images/eventpro_logo.jpg',
+                  height: 36,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          height: 0.9,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                    ),
-                  ],
+                      ShaderMask(
+                        shaderCallback: (b) =>
+                            AppColors.primaryGradient.createShader(b),
+                        child: const Text(
+                          '.',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 0.9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

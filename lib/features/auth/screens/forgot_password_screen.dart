@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/social_auth_button.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -54,6 +57,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleRecovery() async {
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authStateProvider.notifier).signInWithGoogle();
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -139,6 +161,31 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                     isLoading: _isLoading,
                     label: 'Send Reset Link',
                   ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: AppColors.border, thickness: 0.8)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Text(
+                          'or',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: AppColors.border, thickness: 0.8)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SocialAuthButton(
+                    id: 'google_reset_btn',
+                    onPressed: _isLoading ? null : _handleGoogleRecovery,
+                    label: 'Sign in with Google instead',
+                    iconColor: const Color(0xFF4285F4),
+                  ),
                 ] else ...[
                   // Success state
                   const SizedBox(height: 80),
@@ -193,6 +240,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                             _emailCtrl.clear();
                           }),
                           child: const Text('Resend email'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              context.push(AppRoutes.resetPassword),
+                          child: const Text(
+                              'Open Reset Password page →'),
                         ),
                       ],
                     ),

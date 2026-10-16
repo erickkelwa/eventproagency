@@ -198,24 +198,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         position: _logoSlide,
                         child: Row(
                           children: [
-                            // Gold icon box with FC25 card-like gloss
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.5),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.event_rounded,
-                                    color: Colors.black, size: 30),
+                            // Professional logo image
+                            Image.asset(
+                              'assets/images/eventpro_logo.jpg',
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  gradient: AppColors.primaryGradient,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.5),
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.event_rounded,
+                                      color: Colors.black, size: 30),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 14),

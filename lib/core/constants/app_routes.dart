@@ -12,6 +12,7 @@ class AppRoutes {
 
   // ── User Shell ────────────────────────────────────────────
   static const String home          = '/home';
+  static const String eventsMap     = '/events/map';
   static const String eventDetail   = '/events/:id';
   static const String search        = '/search';
   static const String myBookings    = '/my-bookings';

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/services/notification_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/payment_provider.dart';
+import '../utils/payment_route_args.dart';
 import '../widgets/checkout_shell.dart';
 
 /// M-Pesa STK Push checkout.
@@ -12,12 +13,16 @@ class MpesaCheckoutScreen extends ConsumerStatefulWidget {
   final String bookingType; // 'event' | 'service'
   final String itemId;
   final double amount;
+  final String? itemTitle;
+  final int quantity;
 
   const MpesaCheckoutScreen({
     super.key,
     required this.bookingType,
     required this.itemId,
     required this.amount,
+    this.itemTitle,
+    this.quantity = 1,
   });
 
   @override
@@ -27,6 +32,13 @@ class MpesaCheckoutScreen extends ConsumerStatefulWidget {
 
 class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
   static const _brandGradient = [Color(0xFF00A651), Color(0xFF007A3C)];
+
+  String get _displayTitle => (widget.itemTitle != null &&
+          widget.itemTitle!.trim().isNotEmpty)
+      ? widget.itemTitle!.trim()
+      : (widget.bookingType == 'event'
+          ? 'Event Ticket #${widget.itemId}'
+          : 'Service Booking #${widget.itemId}');
 
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -73,14 +85,23 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
           bookingId: int.tryParse(widget.itemId) ?? 0,
           email: email.isNotEmpty ? email : user?.email,
           fcmToken: user?.fcmToken ?? NotificationService.cachedToken,
+          itemTitle: _displayTitle,
+          quantity: widget.quantity,
         );
 
     if (!mounted) return;
 
     if (payment != null) {
-      context.pushReplacement('/payment-status/${payment.transactionId}');
+      context.pushReplacement(paymentStatusLocation(
+        transactionId: payment.transactionId,
+        bookingType: widget.bookingType,
+        itemId: widget.itemId,
+        itemTitle: _displayTitle,
+        quantity: widget.quantity,
+      ));
     } else {
-      _showError(ref.read(paymentProvider).error ?? 'Payment initiation failed');
+      _showError(ref.read(paymentProvider).error ??
+          'We could not start the M-Pesa request. No payment has been taken.');
     }
   }
 
@@ -97,9 +118,7 @@ class _MpesaCheckoutScreenState extends ConsumerState<MpesaCheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
-    final itemTitle = widget.bookingType == 'event'
-        ? 'Event Ticket #${widget.itemId}'
-        : 'Service Booking #${widget.itemId}';
+    final itemTitle = _displayTitle;
 
     return Form(
       key: _formKey,

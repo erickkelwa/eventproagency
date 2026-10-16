@@ -154,7 +154,7 @@ class AdminEventListScreen extends ConsumerWidget {
                             if (confirmed == true && context.mounted) {
                               await ref
                                   .read(adminEventsProvider.notifier)
-                                  .deleteEvent(int.parse(event.id));
+                                  .deleteEvent(event.id);
                             }
                           }
                         },

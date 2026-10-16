@@ -19,6 +19,7 @@ class PaymentMethodScreen extends ConsumerStatefulWidget {
   /// placeholder when this screen is opened directly (e.g. deep link).
   final double? amount;
   final String? itemTitle;
+  final int quantity;
 
   const PaymentMethodScreen({
     super.key,
@@ -26,6 +27,7 @@ class PaymentMethodScreen extends ConsumerStatefulWidget {
     required this.itemId,
     this.amount,
     this.itemTitle,
+    this.quantity = 1,
   });
 
   @override
@@ -81,6 +83,8 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen>
           bookingType: widget.bookingType,
           itemId: widget.itemId,
           amount: _amount,
+          itemTitle: _itemTitle,
+          quantity: widget.quantity,
         );
         break;
       case PaymentMethod.airtel:
@@ -88,6 +92,8 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen>
           bookingType: widget.bookingType,
           itemId: widget.itemId,
           amount: _amount,
+          itemTitle: _itemTitle,
+          quantity: widget.quantity,
         );
         break;
       case PaymentMethod.paypal:
@@ -95,6 +101,8 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen>
           bookingType: widget.bookingType,
           itemId: widget.itemId,
           amount: _amount,
+          itemTitle: _itemTitle,
+          quantity: widget.quantity,
         );
         break;
       case PaymentMethod.equity:
@@ -102,6 +110,8 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen>
           bookingType: widget.bookingType,
           itemId: widget.itemId,
           amount: _amount,
+          itemTitle: _itemTitle,
+          quantity: widget.quantity,
         );
         break;
     }

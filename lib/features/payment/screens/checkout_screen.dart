@@ -51,6 +51,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           itemId: widget.itemId,
           amount: _total,
           itemTitle: itemTitle,
+          quantity: _quantity,
         ),
         transitionsBuilder: (_, animation, _, child) => SlideTransition(
           position: Tween<Offset>(
